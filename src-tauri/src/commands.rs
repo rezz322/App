@@ -1,7 +1,7 @@
 use tauri::State;
 use serde::{Deserialize, Serialize};
 use crate::db::modal::{Task, Offer};
-use crate::db::servise::{create_task, get_task, update_task, delete_task, create_offer, get_offer, delete_offer};
+use crate::db::servise::{create_task, get_task, update_task, delete_task, create_offer, get_offer, delete_aii_offer, delete_offer};
 use crate::AppState;
 
 
@@ -133,13 +133,26 @@ pub fn get_all_offer_command(state:State<AppState>)->Message<Vec<Offer>>{
 }
 
 #[tauri::command]
-pub fn delete_offer_command(
+pub fn delete_all_offer_command(
     state: State<AppState>,
 ) -> Message<usize> {
     let conn = state.conn.lock().unwrap();
-    let answer = delete_offer(&conn).unwrap();
+    let answer = delete_aii_offer(&conn).unwrap();
     return  Message::<usize> {
         data: answer,
         info: MessageType::Success,
     }
 }
+
+#[tauri::command]
+pub fn delete_offer_command(
+    state: State<AppState>,
+    id: i32,
+) -> Message<usize> {
+    let conn = state.conn.lock().unwrap();
+    let answer = delete_offer(&conn, id).unwrap();
+    return  Message::<usize> {
+        data: answer,
+        info: MessageType::Success,
+    }
+}   

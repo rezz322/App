@@ -30,6 +30,7 @@ pub fn run() {
             commands::create_offer_command,
             commands::get_all_offer_command,
             commands::delete_offer_command,
+            commands::delete_all_offer_command,
             ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

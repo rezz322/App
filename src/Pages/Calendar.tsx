@@ -6,7 +6,7 @@ interface Task {
   id: number;
   name: string;
   date_materials: number;
-  date_working: number; 
+  date_working: number;
   date_complited: number;
   field1: number;
   field2: number;
@@ -19,7 +19,7 @@ interface Task {
 interface Offer {
   id: number;
   day: number;
-  month: number; 
+  month: number;
   year: number;
 }
 
@@ -29,7 +29,7 @@ interface Message<T> {
 }
 
 type DayStateItem = {
-  day: number;          
+  day: number;
   date: Date;
   isWeekend: boolean;
   totalHours: number;
@@ -38,6 +38,8 @@ type DayStateItem = {
   tasks: string;
   isWorking: boolean;
   color: number;
+  // НОВЕ: Ідентифікатор кастомного вихідного дня
+  offerId: number | null;
 };
 
 function isWeekend(date: Date) {
@@ -115,21 +117,25 @@ export default function Calendar() {
     fetchTasks();
   }, [currentDate, selectedDilytsia]);
 
-  const getCustomWeekends = async (): Promise<Set<string>> => {
+  // ЗМІНЕНО: Тепер повертає Map<"YYYY-MM-DD", offer.id>
+  const getCustomWeekends = async (): Promise<Map<string, number>> => {
     try {
       const response: Message<Offer[]> = await invoke("get_all_offer_command");
       if (response.info !== "Success" || !response.data) {
         console.error(`Error fetching offers: ${response.info}`);
-        return new Set();
+        return new Map();
       }
       
-      return new Set(response.data.map(offer => 
-        `${offer.year}-${String(offer.month).padStart(2, '0')}-${String(offer.day).padStart(2, '0')}`
-      ));
+      const customWeekendMap = new Map<string, number>();
+      response.data.forEach((offer) => {
+        const dateKey = `${offer.year}-${String(offer.month).padStart(2, '0')}-${String(offer.day).padStart(2, '0')}`;
+        customWeekendMap.set(dateKey, offer.id);
+      });
+      return customWeekendMap;
 
     } catch (err) {
       console.error(`Failed to fetch offers: ${String(err)}`);
-      return new Set();
+      return new Map();
     }
   };
 
@@ -138,14 +144,16 @@ export default function Calendar() {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const DAILY_HOUR_LIMIT = 8;
       
-      const customWeekendDatesSet = await getCustomWeekends();
+      // Отримуємо мапу ID
+      const customWeekendDatesMap = await getCustomWeekends();
+      // Створюємо Set для функцій skipWeekends/calculateWorkingDays
+      const customWeekendDatesSet = new Set(customWeekendDatesMap.keys());
 
       const dailyTaskData: {
-        [key: string]: { totalHours: number; is_working: boolean; tasks: string; all_h: number, color: number  };
+        [key: string]: { totalHours: number; is_working: boolean; tasks: string; all_h: number, color: number };
       } = {};
 
       const sortedTasks = [...tasks].sort((a, b) => a.date_working - b.date_working);
-      let color = 0;
       sortedTasks.forEach((task) => {
         let startDate = new Date(task.date_working * 1000);
         
@@ -191,7 +199,7 @@ export default function Calendar() {
           const currentMonth = currentDay.getMonth();
           const currentDayNumber = currentDay.getDate();
           const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`;
-          
+
           const isStandardWeekendDay = isWeekend(currentDay);
           const isCustomWeekendDay = customWeekendDatesSet.has(dateKey);
 
@@ -241,7 +249,10 @@ export default function Calendar() {
         const date = new Date(year, month, d);
         const isW = isWeekend(date);
         const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const isCustomW = customWeekendDatesSet.has(dateKey);
+        
+        // Отримуємо offerId для дати
+        const offerId = customWeekendDatesMap.get(dateKey) || null;
+        const isCustomW = offerId !== null;
 
         const storageKey = `${year}-${month}-${d}`;
         const dt = dailyTaskData[storageKey] || {
@@ -249,18 +260,20 @@ export default function Calendar() {
           is_working: false,
           tasks: "",
           all_h: 0,
+          color: 0,
         };
 
         newDays.push({
           day: d,
           date,
-          isWeekend: isW || isCustomW,
+          isWeekend: isW || isCustomW, // День вихідний, якщо стандартний АБО кастомний
           totalHours: dt.totalHours,
           tasks: dt.tasks,
           yer: year,
           month: month,
           isWorking: dt.is_working,
           color: dt.color,
+          offerId: offerId, // ПЕРЕДАЄМО ID СЮДИ
         });
       }
 
@@ -276,11 +289,24 @@ export default function Calendar() {
     fetchTasks();
   };
 
+  const ondaydelete = async (id:number) => {
+    await invoke("delete_offer_command", { id: id });
+    fetchTasks();
+  };
+
+  
   const resetCalendar = async () => {
     console.log("Сброс кастомных выходных...");
-    await invoke("delete_offer_command"); 
+    await invoke("delete_all_offer_command"); 
     
-    setDaysState(initialDaysState.map((d) => ({ ...d, isWeekend: isWeekend(d.date), tasks: d.tasks, totalHours: 0, isWorking: false })));
+    setDaysState(initialDaysState.map((d) => ({ 
+        ...d, 
+        isWeekend: isWeekend(d.date), 
+        tasks: d.tasks, 
+        totalHours: 0, 
+        isWorking: false, 
+        offerId: null // Обов'язково скидаємо offerId
+    })));
     fetchTasks(); 
   };
   
@@ -340,7 +366,9 @@ export default function Calendar() {
                 taskNames={d.tasks}
                 isWorkingPeriod={d.isWorking}
                 onDayClick={onDayClick}
+                ondaydelete = {ondaydelete}
                 color={d.color}
+                offerId={d.offerId} 
               />
             ))}
           </div>

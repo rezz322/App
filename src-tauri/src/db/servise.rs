@@ -295,9 +295,17 @@ pub fn get_offer(conn:&Connection) -> Result<Vec<Offer>, rusqlite::Error> {
     Ok(offers)
 }
 
-pub fn delete_offer (
+pub fn delete_aii_offer (
     conn:&Connection,
 ) -> result::Result<usize, rusqlite::Error> {
     let answer = conn.execute("DELETE FROM Offer", params![]).unwrap();
+    Ok(answer)
+}
+
+pub fn delete_offer(
+    conn:&Connection,
+    id: i32,
+) -> result::Result<usize, rusqlite::Error> {
+    let answer = conn.execute("DELETE FROM Offer WHERE id = ?1;", params![id]).unwrap();
     Ok(answer)
 }
