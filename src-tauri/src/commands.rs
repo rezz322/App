@@ -1,7 +1,7 @@
 use tauri::State;
 use serde::{Deserialize, Serialize};
 use crate::db::modal::{Task, Offer};
-use crate::db::servise::{create_task, get_task, update_task, delete_task, create_offer, get_offer, delete_aii_offer, delete_offer};
+use crate::db::servise::{create_task, get_task, update_task, delete_task, create_offer, get_offer, delete_aii_offer, delete_offer, update_check};
 use crate::AppState;
 
 
@@ -28,7 +28,9 @@ pub fn create_task_command(
     date: i64,
     field1: i32,
     field2: i32,
-    field3: i32,)->Message<Task>
+    field3: i32,
+
+)->Message<Task>
     {
     let conn = state.conn.lock().unwrap();
     let tasks = create_task(
@@ -82,6 +84,9 @@ pub fn update_task_command(
                 field1: 0,
                 field2: 0,
                 field3: 0,
+                field1_end: 0,
+                field2_end: 0,
+                field3_end: 0,
                 all_hour: 0,
                 is_comlited: 0,
                 collor: 0,
@@ -120,6 +125,13 @@ pub fn create_offer_command(
          data: offer,
          info: MessageType::Success,
     };   
+}
+
+#[tauri::command]
+pub fn update_task_check_command(state: State<AppState>, id: i32, is_comlited:bool) -> i32 {
+    let conn: std::sync::MutexGuard<'_, rusqlite::Connection> =  state.conn.lock().unwrap();
+    let data = update_check(&conn, id, is_comlited).unwrap();
+    data
 }
 
 #[tauri::command]

@@ -38,7 +38,6 @@ type DayStateItem = {
   tasks: string;
   isWorking: boolean;
   color: number;
-  // НОВЕ: Ідентифікатор кастомного вихідного дня
   offerId: number | null;
 };
 
@@ -117,7 +116,6 @@ export default function Calendar() {
     fetchTasks();
   }, [currentDate, selectedDilytsia]);
 
-  // ЗМІНЕНО: Тепер повертає Map<"YYYY-MM-DD", offer.id>
   const getCustomWeekends = async (): Promise<Map<string, number>> => {
     try {
       const response: Message<Offer[]> = await invoke("get_all_offer_command");
@@ -144,9 +142,7 @@ export default function Calendar() {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const DAILY_HOUR_LIMIT = 8;
       
-      // Отримуємо мапу ID
       const customWeekendDatesMap = await getCustomWeekends();
-      // Створюємо Set для функцій skipWeekends/calculateWorkingDays
       const customWeekendDatesSet = new Set(customWeekendDatesMap.keys());
 
       const dailyTaskData: {
@@ -155,10 +151,10 @@ export default function Calendar() {
 
       const sortedTasks = [...tasks].sort((a, b) => a.date_working - b.date_working);
       sortedTasks.forEach((task) => {
-        let startDate = new Date(task.date_working * 1000);
-        
+        let startDate =(task.date_working*1000)- 24*60*60*1000;
         let remainingHours = 0;
         let currentDay = new Date(startDate);
+        console.log(currentDay);
         
         if (selectedDilytsia === "field1") {
           remainingHours = task.field1;
@@ -198,7 +194,7 @@ export default function Calendar() {
           const currentYear = currentDay.getFullYear();
           const currentMonth = currentDay.getMonth();
           const currentDayNumber = currentDay.getDate();
-          const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`;
+          const dateKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`;
 
           const isStandardWeekendDay = isWeekend(currentDay);
           const isCustomWeekendDay = customWeekendDatesSet.has(dateKey);
@@ -222,6 +218,8 @@ export default function Calendar() {
             );
 
             if (hoursForToday > 0) {
+              console.log("пришло с бека:        ",  currentDay);
+              
               dailyTaskData[storageKey].color = task.collor;
               dailyTaskData[storageKey].totalHours += hoursForToday;
               dailyTaskData[storageKey].is_working = true;
@@ -250,7 +248,6 @@ export default function Calendar() {
         const isW = isWeekend(date);
         const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         
-        // Отримуємо offerId для дати
         const offerId = customWeekendDatesMap.get(dateKey) || null;
         const isCustomW = offerId !== null;
 
@@ -266,17 +263,17 @@ export default function Calendar() {
         newDays.push({
           day: d,
           date,
-          isWeekend: isW || isCustomW, // День вихідний, якщо стандартний АБО кастомний
+          isWeekend: isW || isCustomW, 
           totalHours: dt.totalHours,
           tasks: dt.tasks,
           yer: year,
           month: month,
           isWorking: dt.is_working,
           color: dt.color,
-          offerId: offerId, // ПЕРЕДАЄМО ID СЮДИ
+          offerId: offerId, 
         });
       }
-
+      console.log(newDays);
       setDaysState(newDays);
       setInitialDaysState(newDays); 
     };
@@ -305,7 +302,7 @@ export default function Calendar() {
         tasks: d.tasks, 
         totalHours: 0, 
         isWorking: false, 
-        offerId: null // Обов'язково скидаємо offerId
+        offerId: null 
     })));
     fetchTasks(); 
   };

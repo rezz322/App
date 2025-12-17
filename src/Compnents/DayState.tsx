@@ -43,7 +43,7 @@ const DayState: React.FC<DayStateProps> = ({
     let bgColor = 'bg-blue-50'; 
   
     if (isCustomWeekend) {
-      bgColor = 'bg-red-300 hover:bg-red-400'; // Змінив колір для кращої видимості
+      bgColor = 'bg-red-300 hover:bg-red-400'; 
     } else if (isWeekend) {
       bgColor = 'bg-red-100';
     } else if (isWorkingPeriod) {

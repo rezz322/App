@@ -13,7 +13,7 @@ interface Task {
     field2: number;
     field3: number;
     all_hour: number;
-    is_comlited: number;
+    is_comlited: number; 
 }
 
 interface OfferProps {
@@ -27,6 +27,7 @@ export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedTask, setEditedTask] = useState<Task>(task);
 
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setEditedTask((prevData) => ({
@@ -35,46 +36,59 @@ export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
                 name === 'name'
                     ? value
                     : name.startsWith('date')
-                        ? new Date(value).getTime()
+                        ? new Date(value).getTime() // Получаем мс
                         : parseInt(value, 10),
         }));
     };
 
-    
+const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked;
 
+
+        await invoke("update_task_check_command", {
+            id: task.id,
+            isComlited: isChecked,
+        });
+        refreshTasks();   
+        console.log("Статус успешно изменен на:", isChecked);
+
+};
     const handleUpdate = async () => {
         try {
             console.log(editedTask);
             const normalizeMs = (value: number) => (value < 1e12 ? value * 1000 : value);
-            const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
-            const addDays = (d: Date, days: number) => { const res = new Date(d); res.setDate(res.getDate() + days); return res; };
-            const toIsoDay = (d: Date) => d.toISOString().split('T')[0];
-            const getWorkingDaysForDilytsia = (startMs: number, hours: number, offsetDays: number) => {
-                const days: string[] = [];
-                if (!hours || hours <= 0) return days;
-                const startDate = new Date(startMs);
-                let current = new Date(startDate);
-                let off = offsetDays;
-                while (off > 0) {
-                    current = addDays(current, 1);
-                    if (!isWeekend(current)) off--;
-                }
-                const needed = Math.max(1, Math.ceil(hours / 8));
-                let count = 0;
-                while (count < needed) {
-                    if (!isWeekend(current)) {
-                        days.push(toIsoDay(current));
-                        count++;
-                    }
-                    current = addDays(current, 1);
-                }
-                return days;
-            };
+
             if (tasks) {
                 const proposedStartMs = normalizeMs(Number(editedTask.date_working));
                 const proposedDaysSet = new Set<string>();
                 const days1 = Math.ceil(Number(editedTask.field1) / 8) || 0;
                 const days2 = Math.ceil(Number(editedTask.field2) / 8) || 0;
+                const getWorkingDaysForDilytsia = (startMs: number, hours: number, offsetDays: number) => {
+
+                    const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
+                    const addDays = (d: Date, days: number) => { const res = new Date(d); res.setDate(res.getDate() + days); return res; };
+                    const toIsoDay = (d: Date) => d.toISOString().split('T')[0];
+                    const days: string[] = [];
+                    if (!hours || hours <= 0) return days;
+                    const startDate = new Date(startMs);
+                    let current = new Date(startDate);
+                    let off = offsetDays;
+                    while (off > 0) {
+                        current = addDays(current, 1);
+                        if (!isWeekend(current)) off--;
+                    }
+                    const needed = Math.max(1, Math.ceil(hours / 8));
+                    let count = 0;
+                    while (count < needed) {
+                        if (!isWeekend(current)) {
+                            days.push(toIsoDay(current));
+                            count++;
+                        }
+                        current = addDays(current, 1);
+                    }
+                    return days;
+                };
+
                 getWorkingDaysForDilytsia(proposedStartMs, editedTask.field1, 0).forEach(d => proposedDaysSet.add(d + '-field1'));
                 getWorkingDaysForDilytsia(proposedStartMs, editedTask.field2, days1).forEach(d => proposedDaysSet.add(d + '-field2'));
                 getWorkingDaysForDilytsia(proposedStartMs, editedTask.field3, days1 + days2).forEach(d => proposedDaysSet.add(d + '-field3'));
@@ -96,14 +110,15 @@ export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
                     return;
                 }
             }
+
             const response: { info: string, data: Task } = await invoke("update_task_command", {
                 id: editedTask.id,
                 name: editedTask.name,
-                date: editedTask.date_working*1000,
+                date: editedTask.date_working, 
                 field1: editedTask.field1,
                 field2: editedTask.field2,
                 field3: editedTask.field3,
-                isComlited: editedTask.is_comlited,
+                isComlited: editedTask.is_comlited, 
             });
 
             if (response.info === "Success") {
@@ -137,7 +152,8 @@ export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
 
     const getFormattedDate = (timestamp: number) => {
         if (timestamp === 0 || !Number.isFinite(timestamp)) return '';
-        return new Date(Math.abs(timestamp) > 1e14 ? Math.floor(timestamp / 1000) : timestamp).toISOString().split('T')[0];
+        const dateMs = Math.abs(timestamp) < 1e12 ? timestamp * 1000 : timestamp;
+        return new Date(dateMs).toISOString().split('T')[0];
     };
 
 
@@ -145,7 +161,8 @@ export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
     return (
         <tr className="border-b last:border-b-0">
             {isEditing ? (
-                <td colSpan={6} className="p-4">
+                // ... (Код режима редактирования)
+                <td colSpan={10} className="p-4"> 
                     <div className="flex flex-col space-y-2 w-full">
                         <input
                             type="text"
@@ -157,7 +174,8 @@ export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
                         <input
                             type="date"
                             name="date_working"
-                            value={getFormattedDate(editedTask.date_working*1000)}
+
+                            value={getFormattedDate(editedTask.date_working)} 
                             onChange={handleChange}
                             className="border rounded px-2 py-1"
                         />
@@ -188,15 +206,16 @@ export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
                             onChange={handleChange}
                             className="border rounded px-2 py-1"
                         >
-                            <option value={0}>No</option>
-                            <option value={1}>Yes</option>
+                            <option value={0}>В процесі</option>
+                            <option value={1}>Завершено</option>
                         </select>
                         <div className="flex space-x-2 mt-2">
-                            <button onClick={handleUpdate} className="bg-green-500 text-white px-3 py-1 rounded">Save</button>
-                            <button onClick={() => setIsEditing(false)} className="bg-gray-500 text-white px-3 py-1 rounded">Cancel</button>
+                            <button onClick={handleUpdate} className="bg-green-500 text-white px-3 py-1 rounded">Зберегти</button>
+                            <button onClick={() => setIsEditing(false)} className="bg-gray-500 text-white px-3 py-1 rounded">Скасувати</button>
                         </div>
                     </div>
                 </td>
+                // ...
             ) : (
                 <>
                     <td className="py-2 px-4">{task.id}</td>
@@ -205,9 +224,16 @@ export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
                     <td className="py-2 px-4">{task.field1}</td>
                     <td className="py-2 px-4">{task.field2}</td>
                     <td className="py-2 px-4">{task.field3}</td>
-                    <td className="py-2 px-4">{new Date(task.date_materials*1000).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}.</td>
-                    <td className="py-2 px-4">{new Date(task.date_complited*1000).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}.</td>
+                    <td className="py-2 px-4">{new Date(task.date_materials * 1000).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}.</td>
+                    <td className="py-2 px-4">{new Date(task.date_complited * 1000).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}.</td>
                     <td className="py-2 px-4 flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            checked={task.is_comlited === 1}
+                            onChange={handleToggleComplete}
+                            title={task.is_comlited === 1 ? 'Позначити як "В процесі"' : 'Позначити як "Завершено"'}
+                            className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                        />
                         <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${task.is_comlited === 1 ? 'bg-green-50 text-green-800 ring-green-600/20' : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'} ring-1 ring-inset`}>
                             {task.is_comlited === 1 ? 'Завершено' : 'В процесі'}
                         </span>

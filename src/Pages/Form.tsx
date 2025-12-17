@@ -9,7 +9,7 @@ interface FormData {
     field1: number;
     field2: number;
     field3: number;
-  }
+}
 
 interface Message<T> {
     data: T;
@@ -25,6 +25,9 @@ interface Task {
     field1: number;
     field2: number;
     field3: number;
+    field1_end: number,
+    field2_end: number,
+    field3_end: number,
     all_hour: number;
     is_comlited: number;
 }
@@ -45,40 +48,72 @@ export default function Main() {
         field1: 0,
         field2: 0,
         field3: 0,
-      });
+    });
 
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [sortColumn, setSortColumn] = useState<keyof Task | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [comlited, setcomplited] = useState(false)
 
-function is_free_time(): boolean {
+    const getNextAvailableTime = (fieldKey: 'field1_end' | 'field2_end' | 'field3_end') => {
+        let latestEndTime = 0;
+        
+        tasks
+            .filter(task => task.is_comlited === 0)
+            .forEach(task => {
+                const currentEndTime = task[fieldKey]*1000;
+                console.log("   ", new Date(task.field2_end*1000));
+                
+                console.log(currentEndTime);
+                if (currentEndTime > latestEndTime) {
+                    latestEndTime = currentEndTime;
+                    console.log("task             ", new Date(currentEndTime));
+                }
+            });
 
-    const proposedStartTimeMs: number = formData.date;
-
-    const durationHours: number = Number(formData.field1) + Number(formData.field2) + Number(formData.field3);
-    const proposedEndTimeMs: number = proposedStartTimeMs + durationHours * 60 * 60 * 1000;
-
-    const isTimeSlotBooked = tasks.some((task) => {
-        if (task.is_comlited === 1) return false;
-
-        const existingStartTimeMs = Number(task.date_working) * 1000;
-        const existingEndTimeMs = Number(task.date_complited) * 1000;
-
-        if (isNaN(existingStartTimeMs) || isNaN(existingEndTimeMs)) return false;
-
-        const isOverlapping = proposedStartTimeMs < existingEndTimeMs && existingStartTimeMs < proposedEndTimeMs;
-        if (isOverlapping) {
-            console.log(`Пересечение найдено с задачей от ${new Date(existingStartTimeMs).toLocaleString()}`);
-            return true;
+        if (latestEndTime === 0) {
+            return "Вільна"; 
         }
-        return false;
-    });
+        
+        const nextAvailableDate = new Date((latestEndTime + 24 *60 *60 * 1000) ); 
+        console.log("fdfdf                 ", new Date(nextAvailableDate));
+        const dateOptions: Intl.DateTimeFormatOptions = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        };
+        return nextAvailableDate.toLocaleString('uk-UA', dateOptions);
+    };
 
-    console.log(isTimeSlotBooked ? "Время ЗАНЯТО" : "Время СВОБОДНО");
-    return !isTimeSlotBooked;
-}
+
+
+    function is_free_for_field(): boolean {
+
+        const proposedStartTimeMs: number = formData.date;
+        let isTimeSlotBooked = false;
+
+        if (formData.field1 > 0) {
+            for (const task of tasks) {
+                if (task.is_comlited === 1) continue;
+                if (task.field1 === 0) continue; 
+
+                const existingStartTimeMs = Number(task.date_working) * 1000;
+        
+                if (existingStartTimeMs < proposedStartTimeMs &&
+                    proposedStartTimeMs < task.field1_end * 1000) {
+                    isTimeSlotBooked = true;
+                    console.log(`Поле field_1 ЗАЙНЯТО: Перетин із завданням ID: ${task.id}, Назва: ${task.name}`);
+                    break;
+                } 
+            }
+        }
+
+        return isTimeSlotBooked;
+    }
 
 
     const fetchTasks = async () => {
@@ -88,7 +123,7 @@ function is_free_time(): boolean {
             const response: Message<Task[]> = await invoke("get_all_task_command");
             if (response.info === "Success") {
                 setTasks(response.data);
-                
+
             } else {
                 setError(`Error fetching tasks: ${response.info}`);
             }
@@ -107,77 +142,77 @@ function is_free_time(): boolean {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prevData) => ({
-          ...prevData,
-          [name]:
-            name === 'name'
-              ? value
-              : name === 'date'
-              ? new Date(value).getTime()
-              : value === ''
-              ? 0
-              : parseInt(value, 10),
+            ...prevData,
+            [name]:
+                name === 'name'
+                    ? value
+                    : name === 'date'
+                    ? new Date(value).getTime()
+                    : value === ''
+                    ? 0
+                    : parseInt(value, 10),
         }));
-      };
+    };
 
-      const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if ((formData.field1 < 0 || formData.field2 < 0 || formData.field3 < 0)||!is_free_time() ) {
-          alert('Дільниці не можуть бути менше 0 або в цей період вже є замовлення');
-          return;
+        if ((formData.field1 < 0 || formData.field2 < 0 || formData.field3 < 0) || is_free_for_field()) {
+            alert('Дільниці не можуть бути менше 0 або в цей період вже є замовлення');
+            return;
         }
 
         try {
-          const response: Message<any> = await invoke("create_task_command", {
-            name: formData.name,
-            date: formData.date,
-            field1: formData.field1,
-            field2: formData.field2,
-            field3: formData.field3,
-          });
-          console.log(response);
-          if (response.info === "Success") {
-            setFormData({
-              date: 0,
-              name: '',
-              field1: 0,
-              field2: 0,
-              field3: 0,
+            const response: Message<any> = await invoke("create_task_command", {
+                name: formData.name,
+                date: formData.date,
+                field1: formData.field1,
+                field2: formData.field2,
+                field3: formData.field3,
             });
-            fetchTasks(); 
+            console.log(response);
+            if (response.info === "Success") {
+                setFormData({
+                    date: 0,
+                    name: '',
+                    field1: 0,
+                    field2: 0,
+                    field3: 0,
+                });
+                fetchTasks();
                 try { window.dispatchEvent(new CustomEvent('tasksUpdated')); } catch(e){}
 
-          }
+            }
         } catch (error) {
-          alert(`Failed to create task: ${error}`);
-          console.error("Failed to create task:", error);
+            alert(`Failed to create task: ${error}`);
+            console.error("Failed to create task:", error);
         }
-      };
-
-      const handleSort = (column: keyof Task) => {
+    };
+    
+    const handleSort = (column: keyof Task) => {
         if (sortColumn === column) {
-          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
-          setSortColumn(column);
-          setSortDirection('asc');
+            setSortColumn(column);
+            setSortDirection('asc');
         }
-      };
+    };
 
-      const sortedTasks = [...tasks].sort((a, b) => {
+    const sortedTasks = [...tasks].sort((a, b) => {
         if (!sortColumn) return 0;
 
         const aValue = a[sortColumn];
         const bValue = b[sortColumn];
 
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
         } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-          return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+            return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
         } else if (typeof aValue === 'bigint' && typeof bValue === 'bigint') {
-          return sortDirection === 'asc' ? Number(aValue - bValue) : Number(bValue - aValue);
+            return sortDirection === 'asc' ? Number(aValue - bValue) : Number(bValue - aValue);
         }
         return 0;
-      });
+    });
 
     return (
         <div className="p-4">
@@ -222,7 +257,7 @@ function is_free_time(): boolean {
 
             <div className="bg-white p-6 rounded-lg shadow mb-8">
                 <h2 className="text-xl font-bold mb-4 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 mr-2">
-  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
 </svg>Додати замовлення</h2>
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -249,6 +284,7 @@ function is_free_time(): boolean {
                         <div>
                             <label htmlFor="area1" className="block text-gray-700 text-sm font-bold mb-2">Дільниця 1 (год)</label>
                             <input type="number" id="area1" name="field1" value={formData.field1 === 0 ? '' : formData.field1} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+                            <p className="text-xs text-gray-500 mt-1">Наступна доступна: **{getNextAvailableTime('field1_end')}**</p>
                         </div>
                         <div>
                             <label htmlFor="area2" className="block text-gray-700 text-sm font-bold mb-2">Дільниця 2 (год)</label>
@@ -273,7 +309,7 @@ function is_free_time(): boolean {
 
             <div className="bg-white p-6 rounded-lg shadow">
                 <h2 className="text-xl font-bold mb-4 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 mr-2">
-  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" />
 </svg>Список замовлень</h2>
                 {loading ? (
                     <div className="flex justify-center items-center h-64 text-xl">Loading tasks...</div>
@@ -345,7 +381,7 @@ function is_free_time(): boolean {
                             </thead>
                             <tbody>
                                 {sortedTasks.map((task) => (
-                                    <Offer key={task.id} task={task} tasks={tasks} refreshTasks={fetchTasks} />
+                                    <Offer key={task.id} task={task} tasks={tasks} refreshTasks={fetchTasks}/>
                                 ))}
                             </tbody>
                         </table>

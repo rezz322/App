@@ -14,6 +14,9 @@ pub fn init() -> rusqlite::Connection {
             field1 INTEGER NOT NULL,
             field2 INTEGER NOT NULL,
             field3 INTEGER NOT NULL,
+            field1_end INTEGER NOT NULL,
+            field2_end INTEGER NOT NULL,
+            field3_end INTEGER NOT NULL,
             all_hour INTEGER NOT NULL,
             is_comlited INTEGER,
             collor INTEGER NOT NULL

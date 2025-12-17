@@ -1,8 +1,70 @@
-use std::result;
+use std::{env::current_exe, result};
 use rand::Rng;
 use super::modal::{ Task, Offer};
 use rusqlite::{params, Connection};
-use chrono::{ Duration, TimeZone, Utc, Weekday, Datelike};
+use chrono::{DateTime, Duration, TimeZone, Utc, Weekday, Datelike};
+
+    // // Convert client ms timestamp to DateTime<Utc> (DB stores seconds)
+    // let start_dt = Utc.timestamp_opt(date / 1000, 0).unwrap();
+
+    // // If start falls on weekend, move to next working day (Mon)
+    // let mut dt = start_dt;
+    // while dt.weekday() == Weekday::Sat || dt.weekday() == Weekday::Sun {
+    //     dt = dt + Duration::days(1);
+    // }
+
+    // // Sequentially allocate working days for each dilytsia, skipping weekends
+    // let mut current = dt;
+    // let allocate_block = |hours: i32, cur: &mut chrono::DateTime<Utc>| -> Option<chrono::DateTime<Utc>> {
+    //     if hours <= 0 { return None; }
+    //     let mut needed: i64 = ((hours as i64) + 7) / 8; // ceil division
+    //     if needed <= 0 { needed = 1; }
+    //     let mut counted = 0i64;
+    //     let last_day = loop {
+    //         if cur.weekday() != Weekday::Sat && cur.weekday() != Weekday::Sun {
+    //             counted += 1;
+    //             let candidate = *cur;
+    //             if counted >= needed {
+    //                 *cur = candidate + Duration::days(1);
+    //                 break candidate;
+    //             }
+    //         }
+    //         *cur = *cur + Duration::days(1);
+    //     };
+    //     *cur = last_day + Duration::days(1);
+    //     Some(last_day)
+    // };
+
+    // let mut last_allocated: Option<chrono::DateTime<Utc>> = None;
+    // if let Some(d) = allocate_block(field1, &mut current) { last_allocated = Some(d); }
+    // if let Some(d) = allocate_block(field2, &mut current) { last_allocated = Some(d); }
+    // if let Some(d) = allocate_block(field3, &mut current) { last_allocated = Some(d); }
+
+    // let data_end = last_allocated.unwrap_or(dt);
+
+    // // Materials date: 2 working days before the (adjusted) start
+    // let mut data_materials = dt;
+    // let mut back_count = 0i32;
+    // while back_count < 2 {
+    //     data_materials = data_materials - Duration::days(1);
+    //     if data_materials.weekday() != Weekday::Sat && data_materials.weekday() != Weekday::Sun {
+    //         back_count += 1;
+    //     }
+    // }
+
+    // let date_materials_ts = data_materials.timestamp();
+    // let date_end_ts = data_end.timestamp();
+    // let date_w_ts = dt.timestamp();
+
+    // let all_hours = field1 + field2 + field3;
+
+    // let time = Time {
+    //     all_h: all_hours,
+    //     data_materials: date_materials_ts,
+    //     date_complited: date_end_ts,
+    //     data_w: date_w_ts,
+    // };
+    
 
 
 pub struct Time{
@@ -10,6 +72,10 @@ pub struct Time{
     data_materials: i64,
     date_complited:i64,
     data_w:i64,
+    field1_end:i64,
+    field2_end:i64,
+    field3_end:i64,
+
 
 }
 
@@ -19,48 +85,55 @@ fn generate_random_int()-> i32 {
     let random_number= rng.random_range(0..11);
     random_number
 }
-fn get_time(date: i64, field1: i32, field2: i32, field3: i32) -> Time {
-    // Convert client ms timestamp to DateTime<Utc> (DB stores seconds)
-    let start_dt = Utc.timestamp_opt(date / 1000, 0).unwrap();
 
-    // If start falls on weekend, move to next working day (Mon)
-    let mut dt = start_dt;
-    while dt.weekday() == Weekday::Sat || dt.weekday() == Weekday::Sun {
-        dt = dt + Duration::days(1);
+fn get_time(date: i64, field1: i32, field2: i32, field3: i32) -> Time {
+
+    let mut current_dt = Utc.timestamp_opt(date / 1000, 0).unwrap();
+    println!("{}", current_dt);
+    current_dt += Duration::days(1);
+    let mut data_w = current_dt;
+    while data_w.weekday() == Weekday::Sat || data_w.weekday() == Weekday::Sun {
+        data_w = data_w + Duration::days(1);
     }
 
-    // Sequentially allocate working days for each dilytsia, skipping weekends
-    let mut current = dt;
-    let allocate_block = |hours: i32, cur: &mut chrono::DateTime<Utc>| -> Option<chrono::DateTime<Utc>> {
+    let mut current = data_w;
+
+
+    let allocate_block = |hours: i32, cur: &mut chrono::DateTime<Utc>| -> Option<i64> {
         if hours <= 0 { return None; }
-        let mut needed: i64 = ((hours as i64) + 7) / 8; // ceil division
-        if needed <= 0 { needed = 1; }
-        let mut counted = 0i64;
-        let last_day = loop {
+        
+        let needed_days: i64 = ((hours as i64) + 7) / 8;
+        if needed_days <= 0 { return Some(cur.timestamp()); } 
+
+        let mut counted_days = 0i64;
+        let last_day_ts = loop {
             if cur.weekday() != Weekday::Sat && cur.weekday() != Weekday::Sun {
-                counted += 1;
-                let candidate = *cur;
-                if counted >= needed {
-                    *cur = candidate + Duration::days(1);
-                    break candidate;
+                counted_days += 1;
+                if counted_days >= needed_days {
+                    let timestamp = cur.timestamp();
+                    *cur = *cur + Duration::days(1);
+                    break timestamp;
                 }
             }
             *cur = *cur + Duration::days(1);
         };
-        *cur = last_day + Duration::days(1);
-        Some(last_day)
+        Some(last_day_ts)
     };
 
-    let mut last_allocated: Option<chrono::DateTime<Utc>> = None;
-    if let Some(d) = allocate_block(field1, &mut current) { last_allocated = Some(d); }
-    if let Some(d) = allocate_block(field2, &mut current) { last_allocated = Some(d); }
-    if let Some(d) = allocate_block(field3, &mut current) { last_allocated = Some(d); }
+    let mut field1_end: i64 = 0;
+    let mut field2_end: i64 = 0;
+    let mut field3_end: i64 = 0;
 
-    let data_end = last_allocated.unwrap_or(dt);
+    if let Some(ts) = allocate_block(field1, &mut current) { field1_end = ts; }
+    if let Some(ts) = allocate_block(field2, &mut current) { field2_end = ts; }
+    if let Some(ts) = allocate_block(field3, &mut current) { field3_end = ts; }
 
-    // Materials date: 2 working days before the (adjusted) start
-    let mut data_materials = dt;
+    let date_complited = current - Duration::days(1);
+
+
+    let mut data_materials = data_w;
     let mut back_count = 0i32;
+
     while back_count < 2 {
         data_materials = data_materials - Duration::days(1);
         if data_materials.weekday() != Weekday::Sat && data_materials.weekday() != Weekday::Sun {
@@ -68,22 +141,18 @@ fn get_time(date: i64, field1: i32, field2: i32, field3: i32) -> Time {
         }
     }
 
-    let date_materials_ts = data_materials.timestamp();
-    let date_end_ts = data_end.timestamp();
-    let date_w_ts = dt.timestamp();
+    let all_h = field1 + field2 + field3;
 
-    let all_hours = field1 + field2 + field3;
-
-    let time = Time {
-        all_h: all_hours,
-        data_materials: date_materials_ts,
-        date_complited: date_end_ts,
-        data_w: date_w_ts,
-    };
-
-    time
+    Time {
+        all_h,
+        data_materials: data_materials.timestamp(),
+        date_complited: date_complited.timestamp(),
+        data_w: data_w.timestamp(),
+        field1_end,
+        field2_end,
+        field3_end,
+    }
 }
-
 
 pub fn get_task(conn:&Connection) -> Result<Vec<Task>, rusqlite::Error> {
     let mut stmt = conn.prepare("SELECT * FROM task")?;
@@ -97,19 +166,20 @@ pub fn get_task(conn:&Connection) -> Result<Vec<Task>, rusqlite::Error> {
                 field1: row.get(5)?,
                 field2: row.get(6)?,
                 field3: row.get(7)?,
-                all_hour: row.get(8)?,
-                is_comlited: row.get(9)?,
-                collor: row.get(10)?,
+                field1_end: row.get(8)?,
+                field2_end: row.get(9)?,
+                field3_end: row.get(10)?, 
+                all_hour: row.get(11)?,
+                is_comlited: row.get(12)?,
+                collor: row.get(13)?,
             })
     })?;
 
     let mut tasks = tasks_iter.collect::<Result<Vec<Task>, rusqlite::Error>>()?;
 
-    // Автоматически отмечаем завершёнными задачи, где дата готовности уже наступила
     let now_ts = Utc::now().timestamp();
     for t in tasks.iter_mut() {
         if t.is_comlited == 0 && t.date_complited > 0 && t.date_complited <= now_ts {
-            // update DB
             conn.execute("UPDATE task SET is_comlited = 1 WHERE id = ?1", params![t.id])?;
             t.is_comlited = 1;
         }
@@ -144,10 +214,13 @@ pub fn create_task(
         field1,
         field2,  
         field3,
+        field1_end,
+        field2_end,  
+        field3_end,
         all_hour,
         is_comlited,
         collor
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8,?9,?10)")
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8,?9,?10,?11,?12,?13)")
         .unwrap();
         stmt.execute(params![
             name,
@@ -157,6 +230,9 @@ pub fn create_task(
             field1,
             field2,
             field3,
+            time.field1_end,
+            time.field2_end,
+            time.field3_end,
             time.all_h,
             0,
             collor
@@ -171,6 +247,9 @@ pub fn create_task(
             field1: field1,
             field2: field2,  
             field3: field3,
+            field1_end: time.field1_end,
+            field2_end: time.field2_end,  
+            field3_end: time.field3_end,
             all_hour: time.all_h,
             is_comlited: 0,
             collor: collor,
@@ -188,6 +267,7 @@ pub fn update_task(
     field1: i32,
     field2: i32,
     field3: i32,
+
     is_comlited: i8,
 )-> Result<Task, rusqlite::Error> {
     let time = get_time(
@@ -206,8 +286,11 @@ pub fn update_task(
         field1 = ?6,
         field2 = ?7,
         field3 = ?8,
-        all_hour = ?9,
-        is_comlited = ?10
+        field1_end = ?9,
+        field2 = ?10,
+        field3 = ?11,
+        all_hour = ?12,
+        is_comlited = ?13
         WHERE id = ?1")
         .unwrap();
         stmt.execute(params![
@@ -219,6 +302,9 @@ pub fn update_task(
             field1,
             field2,
             field3,
+            time.field1_end,
+            time.field2_end,
+            time.field3_end,
             time.all_h,
             is_comlited,
             ]).unwrap();
@@ -232,6 +318,9 @@ pub fn update_task(
             field1: field1 ,
             field2: field2,
             field3: field3,
+            field1_end: time.field1_end,
+            field2_end: time.field2_end,  
+            field3_end: time.field3_end,
             all_hour: time.all_h,
             is_comlited: is_comlited,
             collor: 0,
@@ -309,3 +398,19 @@ pub fn delete_offer(
     let answer = conn.execute("DELETE FROM Offer WHERE id = ?1;", params![id]).unwrap();
     Ok(answer)
 }
+
+pub fn update_check(conn: &Connection, id: i32, is_comlited: bool)-> Result<i32, rusqlite::Error>{
+    println!("поменял");
+    println!("{}",  is_comlited);
+    let mut stmt = conn
+        .prepare("UPDATE task SET is_comlited = ?2 WHERE id = ?1")
+        .unwrap();
+        stmt.execute(params![
+            id,
+            is_comlited,
+            ]).unwrap();
+    
+    Ok((id))
+}
+
+
