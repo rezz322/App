@@ -151,10 +151,9 @@ export default function Calendar() {
 
       const sortedTasks = [...tasks].sort((a, b) => a.date_working - b.date_working);
       sortedTasks.forEach((task) => {
-        let startDate =(task.date_working*1000)- 24*60*60*1000;
+        let startDate =(task.date_working*1000);
         let remainingHours = 0;
         let currentDay = new Date(startDate);
-        console.log(currentDay);
         
         if (selectedDilytsia === "field1") {
           remainingHours = task.field1;
@@ -165,11 +164,18 @@ export default function Calendar() {
             task.field1, 
             customWeekendDatesSet
           );
-          currentDay = new Date(field1EndDate);
+          if(task.field1 == 0){
+            currentDay.setDate(currentDay.getDate() - 1);
+            console.log("fdfdfdfd");
+            
+          }else{
+            currentDay = new Date(field1EndDate);
+          }
           currentDay.setDate(currentDay.getDate() + 1);
           currentDay = skipWeekends(currentDay, customWeekendDatesSet);
           remainingHours = task.field2;
         } else if (selectedDilytsia === "field3") {
+            startDate =startDate;
           const field1EndDate = calculateWorkingDays(
             new Date(startDate), 
             task.field1, 
@@ -184,16 +190,16 @@ export default function Calendar() {
             task.field2, 
             customWeekendDatesSet
           );
-          currentDay = new Date(field2EndDate);
+          if(task.field1 == 0 || task.field2 == 0){
+            currentDay.setDate(currentDay.getDate() - 1);
+          }else{
+                      currentDay = new Date(field2EndDate);
+          }
           currentDay.setDate(currentDay.getDate() + 1);
           currentDay = skipWeekends(currentDay, customWeekendDatesSet);
           remainingHours = task.field3;
         }
-        if(task.field2 == 0 || task.field3 == 0){
-          currentDay.setDate(currentDay.getDate() - 1);
-          console.log("отнял");
-          
-        }
+
         while (remainingHours > 0) {
           const currentYear = currentDay.getFullYear();
           const currentMonth = currentDay.getMonth();
@@ -222,7 +228,7 @@ export default function Calendar() {
             );
 
             if (hoursForToday > 0) {
-              console.log("пришло с бека:        ",  currentDay);
+
               
               dailyTaskData[storageKey].color = task.collor;
               dailyTaskData[storageKey].totalHours += hoursForToday;
@@ -277,7 +283,6 @@ export default function Calendar() {
           offerId: offerId, 
         });
       }
-      console.log(newDays);
       setDaysState(newDays);
       setInitialDaysState(newDays); 
     };

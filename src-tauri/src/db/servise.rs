@@ -41,7 +41,8 @@ fn get_time(date: i64, field1: i32, field2: i32, field3: i32) -> Time {
     let allocate_block = |hours: i32, cur: &mut chrono::DateTime<Utc>| -> Option<i64> {
         if hours <= 0 { return None; }
         
-        let needed_days: i64 = ((hours as i64) + 7) / 8;
+        let needed_days: i64 = ((((hours as f64)) / 8.0).ceil())as i64;
+        println!("{}", needed_days);
         if needed_days <= 0 { return Some(cur.timestamp()); } 
 
         let mut counted_days = 0i64;

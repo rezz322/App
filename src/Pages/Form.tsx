@@ -40,6 +40,24 @@ const getTodayDate = () => {
     return `${year}-${month}-${day}`;
 };
 
+function isWeekend(date:number) {
+    let date_out = 0;
+    let data = new Date(date+24*60*60*1000);
+    console.log("ada", data);
+    
+  const day = data.getDay();
+    console.log(day);
+  if(day == 0){date_out = 2*24*60*60*1000}
+  if(day == 6){
+    date_out = 3*24*60*60*1000
+    
+}
+console.log(data.getDate());
+
+  console.log("fdfdf",new Date(date+ date_out));
+  
+  return (date + date_out);
+}
 
 export default function Main() {
     const [formData, setFormData] = useState<FormData>({
@@ -64,7 +82,8 @@ export default function Main() {
             .forEach(task => {
                 let currentEndTime = task[fieldKey]*1000;
                 if(currentEndTime !== 0 ){
-                    currentEndTime + 24*60*60*1000
+                    currentEndTime = isWeekend(currentEndTime)
+                    currentEndTime= currentEndTime+24*60*60*1000
                 }
                 if (currentEndTime > latestEndTime) {
                     latestEndTime = currentEndTime;
