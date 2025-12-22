@@ -1,11 +1,7 @@
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Main from './Pages/Form';
-import Calendar from "./Pages/Calendar";
-
-
-
-
+import Main from './pages/Form';
+import Calendar from "./pages/Calendar";
 
 function App() {
   return (
