@@ -1,20 +1,8 @@
 import "../App.css"
 import React, { useState } from 'react';
-import { invoke } from "@tauri-apps/api/core";
-
-
-interface Task {
-    id: number;
-    name: string;
-    date_materials: number;
-    date_working: number;
-    date_complited: number;
-    field1: number;
-    field2: number;
-    field3: number;
-    all_hour: number;
-    is_comlited: number; 
-}
+import { Task } from '../types/task';
+import { getFormattedDate } from '../utils/dateUtils';
+import { useTasks } from '../hooks/useTasks';
 
 interface OfferProps {
     task: Task;
@@ -22,97 +10,68 @@ interface OfferProps {
     refreshTasks: () => void;
 }
 
-
-export default function Offer({ task,  refreshTasks }: OfferProps) {
+export default function Offer({ task, refreshTasks }: OfferProps) {
+    const { updateTask, updateTaskStatus, deleteTask } = useTasks();
     const [isEditing, setIsEditing] = useState(false);
     const [editedTask, setEditedTask] = useState<Task>(task);
 
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        console.log(name, value);
         
         setEditedTask((prevData) => ({
             ...prevData,
             [name]:
                 name === 'name'
                     ? value
-                    : name === 'date'
-                    ? new Date(value).getTime()
+                    : name === 'date_working' // Updated to match field name in Task
+                    ? new Date(value).getTime() / 1000
                     : value === ''
                     ? 0
                     : parseInt(value, 10),
         }));
     };
 
-const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isChecked = e.target.checked;
+    const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const isChecked = e.target.checked;
+        const result = await updateTaskStatus(task.id, isChecked);
+        if (result.success) {
+            refreshTasks();
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    };
 
-
-        await invoke("update_task_check_command", {
-            id: task.id,
-            isComlited: isChecked,
-        });
-        refreshTasks();   
-        console.log("Статус успешно изменен на:", isChecked);
-
-};
     const handleUpdate = async () => {
-        try {
-            console.log(editedTask);
-            const response: { info: string, data: Task } = await invoke("update_task_command", {
-                id: editedTask.id,
-                name: editedTask.name,
-                date: editedTask.date_working*1000, 
-                field1: editedTask.field1,
-                field2: editedTask.field2,
-                field3: editedTask.field3,
-                isComlited: editedTask.is_comlited, 
-            });
+        const result = await updateTask(editedTask.id, {
+            ...editedTask,
+            date: editedTask.date_working * 1000 // useTasks hook expects 'date' prop and does the conversion if needed, but here it was previously date_working*1000
+        });
 
-            if (response.info === "Success") {
-                console.log(editedTask);
-                
-                setIsEditing(false);
-                refreshTasks();
-            } else {
-                alert(`Error updating task: ${response.info}`);
-            }
-        } catch (error) {
-            alert(`Failed to update task: ${error}`);
-            console.error("Failed to update task:", error);
+        if (result.success) {
+            setIsEditing(false);
+            refreshTasks();
+        } else {
+            alert(`Error updating task: ${result.error}`);
         }
     };
 
-    const handleDelete = async () => {
-        try {
-            const response: { info: string, data: string } = await invoke("delete_task_command", { id: task.id });
-            if (response.info === "Success") {
-                refreshTasks();
-                try { window.dispatchEvent(new CustomEvent('tasksUpdated')); } catch(e) { }
-            } else {
-                alert(`Error deleting task: ${response.info}`);
-            }
-        } catch (error) {
-            alert(`Failed to delete task: ${error}`);
-            console.error("Failed to delete task:", error);
+    const handleDeleteClick = async () => {
+        if (!window.confirm('Ви впевнені, що хочете видалити це замовлення?')) return;
+        
+        const result = await deleteTask(task.id);
+        if (result.success) {
+            refreshTasks();
+        } else {
+            alert(`Error deleting task: ${result.error}`);
         }
     };
-
-    const getFormattedDate = (timestamp: number) => {
-        if (timestamp === 0 || !Number.isFinite(timestamp)) return '';
-        const dateMs = Math.abs(timestamp) < 1e12 ? timestamp * 1000 : timestamp;
-        return new Date(dateMs).toISOString().split('T')[0];
-    };
-
-
 
     return (
         <tr className="border-b last:border-b-0">
             {isEditing ? (
-                // ... (Код режима редактирования)
                 <td colSpan={10} className="p-4"> 
                     <div className="flex flex-col space-y-2 w-full">
+                        <label className="text-xs font-bold text-gray-500">Імя</label>
                         <input
                             type="text"
                             name="name"
@@ -120,35 +79,47 @@ const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
                             onChange={handleChange}
                             className="border rounded px-2 py-1"
                         />
+                        <label className="text-xs font-bold text-gray-500">Дата початку</label>
                         <input
                             type="date"
                             name="date_working"
-
                             value={getFormattedDate(editedTask.date_working)} 
                             onChange={handleChange}
                             className="border rounded px-2 py-1"
                         />
-                        <input
-                            type="number"
-                            name="field1"
-                            value={editedTask.field1}
-                            onChange={handleChange}
-                            className="border rounded px-2 py-1"
-                        />
-                        <input
-                            type="number"
-                            name="field2"
-                            value={editedTask.field2}
-                            onChange={handleChange}
-                            className="border rounded px-2 py-1"
-                        />
-                        <input
-                            type="number"
-                            name="field3"
-                            value={editedTask.field3}
-                            onChange={handleChange}
-                            className="border rounded px-2 py-1"
-                        />
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500">Дільниця 1</label>
+                                <input
+                                    type="number"
+                                    name="field1"
+                                    value={editedTask.field1}
+                                    onChange={handleChange}
+                                    className="border rounded px-2 py-1 w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500">Дільниця 2</label>
+                                <input
+                                    type="number"
+                                    name="field2"
+                                    value={editedTask.field2}
+                                    onChange={handleChange}
+                                    className="border rounded px-2 py-1 w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500">Дільниця 3</label>
+                                <input
+                                    type="number"
+                                    name="field3"
+                                    value={editedTask.field3}
+                                    onChange={handleChange}
+                                    className="border rounded px-2 py-1 w-full"
+                                />
+                            </div>
+                        </div>
+                        <label className="text-xs font-bold text-gray-500">Статус</label>
                         <select
                             name="is_comlited"
                             value={editedTask.is_comlited}
@@ -189,10 +160,9 @@ const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-500 cursor-pointer" onClick={() => setIsEditing(true)}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                         </svg>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-red-500 cursor-pointer" onClick={handleDelete}>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-red-500 cursor-pointer" onClick={handleDeleteClick}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0l-.91-9m9.288-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.74 6.784m11.318 0l-.919-.259M12 2.25h3c1.02 0 1.96.284 2.8.775M9 2.25H6c-1.02 0-1.96.284-2.8.775M12 5.25v1.5M12 9v1.5M12 12v1.5M12 15v1.5" />
                         </svg>
-                        
                     </td>
                 </>
             )}
