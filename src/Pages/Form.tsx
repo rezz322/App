@@ -55,7 +55,6 @@ export default function Main() {
     const [error, setError] = useState<string | null>(null);
     const [sortColumn, setSortColumn] = useState<keyof Task | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [comlited, setcomplited] = useState(false)
 
     const getNextAvailableTime = (fieldKey: 'field1_end' | 'field2_end' | 'field3_end') => {
         let latestEndTime = 0;
@@ -63,13 +62,12 @@ export default function Main() {
         tasks
             .filter(task => task.is_comlited === 0)
             .forEach(task => {
-                const currentEndTime = task[fieldKey]*1000;
-                console.log("   ", new Date(task.field2_end*1000));
-                
-                console.log(currentEndTime);
+                let currentEndTime = task[fieldKey]*1000;
+                if(currentEndTime !== 0 ){
+                    currentEndTime + 24*60*60*1000
+                }
                 if (currentEndTime > latestEndTime) {
                     latestEndTime = currentEndTime;
-                    console.log("task             ", new Date(currentEndTime));
                 }
             });
 
@@ -77,8 +75,7 @@ export default function Main() {
             return "Вільна"; 
         }
         
-        const nextAvailableDate = new Date((latestEndTime + 24 *60 *60 * 1000) ); 
-        console.log("fdfdf                 ", new Date(nextAvailableDate));
+        const nextAvailableDate = new Date((latestEndTime ) ); 
         const dateOptions: Intl.DateTimeFormatOptions = { 
             year: 'numeric', 
             month: 'short', 
@@ -141,6 +138,8 @@ export default function Main() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+        console.log(name, value);
+        
         setFormData((prevData) => ({
             ...prevData,
             [name]:
@@ -283,16 +282,18 @@ export default function Main() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div>
                             <label htmlFor="area1" className="block text-gray-700 text-sm font-bold mb-2">Дільниця 1 (год)</label>
-                            <input type="number" id="area1" name="field1" value={formData.field1 === 0 ? '' : formData.field1} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+                            <input type="number" id="area1" name="field1" value={formData.field1 === 0 ? '' : formData.field1} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"  />
                             <p className="text-xs text-gray-500 mt-1">Наступна доступна: **{getNextAvailableTime('field1_end')}**</p>
                         </div>
                         <div>
                             <label htmlFor="area2" className="block text-gray-700 text-sm font-bold mb-2">Дільниця 2 (год)</label>
-                            <input type="number" id="area2" name="field2" value={formData.field2 === 0 ? '' : formData.field2} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+                            <input type="number" id="area2" name="field2" value={formData.field2 === 0 ? '' : formData.field2} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"  />
+                            <p className="text-xs text-gray-500 mt-1">Наступна доступна: **{getNextAvailableTime('field2_end')}**</p>
                         </div>
                         <div>
                             <label htmlFor="area3" className="block text-gray-700 text-sm font-bold mb-2">Дільниця 3 (год)</label>
-                            <input type="number" id="area3" name="field3" value={formData.field3 === 0 ? '' : formData.field3} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+                            <input type="number" id="area3" name="field3" value={formData.field3 === 0 ? '' : formData.field3} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"  />
+                              <p className="text-xs text-gray-500 mt-1">Наступна доступна: **{getNextAvailableTime('field3_end')}**</p>
                         </div>
                     </div>
 
@@ -366,6 +367,12 @@ export default function Main() {
                                     </th>
                                     <th className="py-2 px-4 bg-gray-200 text-gray-700 font-bold text-left cursor-pointer" onClick={() => handleSort('date_materials')}>
                                         Дата матеріалів
+                                        {sortColumn === 'date_materials' && (
+                                            <span>{sortDirection === 'asc' ? ' ⬆' : ' ⬇'}</span>
+                                        )}
+                                    </th>
+                                    <th className="py-2 px-4 bg-gray-200 text-gray-700 font-bold text-left cursor-pointer" onClick={() => handleSort('date_working')}>
+                                        Дата початку
                                         {sortColumn === 'date_materials' && (
                                             <span>{sortDirection === 'asc' ? ' ⬆' : ' ⬇'}</span>
                                         )}

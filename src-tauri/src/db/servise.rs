@@ -1,70 +1,9 @@
-use std::{env::current_exe, result};
+use std::result;
 use rand::Rng;
 use super::modal::{ Task, Offer};
 use rusqlite::{params, Connection};
-use chrono::{DateTime, Duration, TimeZone, Utc, Weekday, Datelike};
+use chrono::{Duration, TimeZone, Utc, Weekday, Datelike};
 
-    // // Convert client ms timestamp to DateTime<Utc> (DB stores seconds)
-    // let start_dt = Utc.timestamp_opt(date / 1000, 0).unwrap();
-
-    // // If start falls on weekend, move to next working day (Mon)
-    // let mut dt = start_dt;
-    // while dt.weekday() == Weekday::Sat || dt.weekday() == Weekday::Sun {
-    //     dt = dt + Duration::days(1);
-    // }
-
-    // // Sequentially allocate working days for each dilytsia, skipping weekends
-    // let mut current = dt;
-    // let allocate_block = |hours: i32, cur: &mut chrono::DateTime<Utc>| -> Option<chrono::DateTime<Utc>> {
-    //     if hours <= 0 { return None; }
-    //     let mut needed: i64 = ((hours as i64) + 7) / 8; // ceil division
-    //     if needed <= 0 { needed = 1; }
-    //     let mut counted = 0i64;
-    //     let last_day = loop {
-    //         if cur.weekday() != Weekday::Sat && cur.weekday() != Weekday::Sun {
-    //             counted += 1;
-    //             let candidate = *cur;
-    //             if counted >= needed {
-    //                 *cur = candidate + Duration::days(1);
-    //                 break candidate;
-    //             }
-    //         }
-    //         *cur = *cur + Duration::days(1);
-    //     };
-    //     *cur = last_day + Duration::days(1);
-    //     Some(last_day)
-    // };
-
-    // let mut last_allocated: Option<chrono::DateTime<Utc>> = None;
-    // if let Some(d) = allocate_block(field1, &mut current) { last_allocated = Some(d); }
-    // if let Some(d) = allocate_block(field2, &mut current) { last_allocated = Some(d); }
-    // if let Some(d) = allocate_block(field3, &mut current) { last_allocated = Some(d); }
-
-    // let data_end = last_allocated.unwrap_or(dt);
-
-    // // Materials date: 2 working days before the (adjusted) start
-    // let mut data_materials = dt;
-    // let mut back_count = 0i32;
-    // while back_count < 2 {
-    //     data_materials = data_materials - Duration::days(1);
-    //     if data_materials.weekday() != Weekday::Sat && data_materials.weekday() != Weekday::Sun {
-    //         back_count += 1;
-    //     }
-    // }
-
-    // let date_materials_ts = data_materials.timestamp();
-    // let date_end_ts = data_end.timestamp();
-    // let date_w_ts = dt.timestamp();
-
-    // let all_hours = field1 + field2 + field3;
-
-    // let time = Time {
-    //     all_h: all_hours,
-    //     data_materials: date_materials_ts,
-    //     date_complited: date_end_ts,
-    //     data_w: date_w_ts,
-    // };
-    
 
 
 pub struct Time{
@@ -82,7 +21,7 @@ pub struct Time{
 fn generate_random_int()-> i32 {
 
     let mut rng = rand::rng();
-    let random_number= rng.random_range(0..11);
+    let random_number= rng.random_range(0..100);
     random_number
 }
 
@@ -90,7 +29,7 @@ fn get_time(date: i64, field1: i32, field2: i32, field3: i32) -> Time {
 
     let mut current_dt = Utc.timestamp_opt(date / 1000, 0).unwrap();
     println!("{}", current_dt);
-    current_dt += Duration::days(1);
+    current_dt +Duration::days(1);
     let mut data_w = current_dt;
     while data_w.weekday() == Weekday::Sat || data_w.weekday() == Weekday::Sun {
         data_w = data_w + Duration::days(1);
@@ -131,7 +70,7 @@ fn get_time(date: i64, field1: i32, field2: i32, field3: i32) -> Time {
     let date_complited = current - Duration::days(1);
 
 
-    let mut data_materials = data_w;
+    let mut data_materials = data_w - Duration::days(1);
     let mut back_count = 0i32;
 
     while back_count < 2 {
@@ -142,7 +81,7 @@ fn get_time(date: i64, field1: i32, field2: i32, field3: i32) -> Time {
     }
 
     let all_h = field1 + field2 + field3;
-
+    println!("date_compited:{},    date_start:{},         date_materials:{}", date_complited,data_w, data_materials);
     Time {
         all_h,
         data_materials: data_materials.timestamp(),
@@ -276,7 +215,7 @@ pub fn update_task(
         field2,
         field3,
     );
-
+    println!("{}", field1);
     let mut stmt = conn
         .prepare("UPDATE task SET
         name = ?2,
@@ -287,8 +226,8 @@ pub fn update_task(
         field2 = ?7,
         field3 = ?8,
         field1_end = ?9,
-        field2 = ?10,
-        field3 = ?11,
+        field2_end = ?10,
+        field3_end = ?11,
         all_hour = ?12,
         is_comlited = ?13
         WHERE id = ?1")
@@ -410,7 +349,7 @@ pub fn update_check(conn: &Connection, id: i32, is_comlited: bool)-> Result<i32,
             is_comlited,
             ]).unwrap();
     
-    Ok((id))
+    Ok(id)
 }
 
 

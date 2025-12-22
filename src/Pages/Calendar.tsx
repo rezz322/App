@@ -189,7 +189,11 @@ export default function Calendar() {
           currentDay = skipWeekends(currentDay, customWeekendDatesSet);
           remainingHours = task.field3;
         }
-
+        if(task.field2 == 0 || task.field3 == 0){
+          currentDay.setDate(currentDay.getDate() - 1);
+          console.log("отнял");
+          
+        }
         while (remainingHours > 0) {
           const currentYear = currentDay.getFullYear();
           const currentMonth = currentDay.getMonth();

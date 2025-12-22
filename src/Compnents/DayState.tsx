@@ -11,17 +11,49 @@ interface DayStateProps {
   yer:number;
   month:number;
   color:number;
+  
   
-  // ВИПРАВЛЕНО: ondaydelete очікує лише number (id)
   ondaydelete?: (id: number) => Promise<void>; 
   onDayClick?: (day: number,yer:number, month:number) => Promise<void>;
-  offerId:number | null; // ID кастомного вихідного
+  offerId:number | null; 
 }
 
 const tailwindColors500 = [
-   "bg-orange-500", "bg-amber-400", "bg-yellow-500", "bg-lime-600", 
-  "bg-green-500", "bg-teal-400", "bg-cyan-600", "bg-blue-500", "bg-indigo-400", 
-  "bg-purple-600", "bg-pink-500"      
+  // REDS (1-17)
+  "bg-[#FF0000]", "bg-[#FF1A1A]", "bg-[#FF3333]", "bg-[#E60000]", "bg-[#CC0000]", 
+  "bg-[#B30000]", "bg-[#990000]", "bg-[#800000]", "bg-[#FF4D4D]", "bg-[#FF6666]", 
+  "bg-[#CD5C5C]", "bg-[#F08080]", "bg-[#FA8072]", "bg-[#E9967A]", "bg-[#FFA07A]", 
+  "bg-[#DC143C]", "bg-[#B22222]",
+
+  // ORANGES (18-34)
+  "bg-[#FF4500]", "bg-[#FF8C00]", "bg-[#FFA500]", "bg-[#FF7F50]", "bg-[#FF6347]", 
+  "bg-[#E67E22]", "bg-[#D35400]", "bg-[#BA4A00]", "bg-[#F39C12]", "bg-[#E59866]", 
+  "bg-[#DC7633]", "bg-[#D68910]", "bg-[#CA6F1E]", "bg-[#EDBB99]", "bg-[#F5B041]", 
+  "bg-[#EB984E]", "bg-[#A04000]",
+
+  // YELLOWS & GOLD (35-50) (Без ухода в лимонный/зеленый)
+  "bg-[#FFD700]", "bg-[#FFFF00]", "bg-[#F1C40F]", "bg-[#F4D03F]", "bg-[#F7DC6F]", 
+  "bg-[#D4AC0D]", "bg-[#B7950B]", "bg-[#9A7D0A]", "bg-[#FFDAB9]", "bg-[#F0E68C]", 
+  "bg-[#BDB76B]", "bg-[#EEE8AA]", "bg-[#FFE4B5]", "bg-[#FFEFD5]", "bg-[#FFFACD]", 
+  "bg-[#FAD7A0]",
+
+  // BLUES (51-67)
+  "bg-[#0000FF]", "bg-[#0000CD]", "bg-[#00008B]", "bg-[#000080]", "bg-[#4169E1]", 
+  "bg-[#4682B4]", "bg-[#1E90FF]", "bg-[#00BFFF]", "bg-[#87CEEB]", "bg-[#87CEFA]", 
+  "bg-[#ADD8E6]", "bg-[#B0C4DE]", "bg-[#5DADE2]", "bg-[#3498DB]", "bg-[#2E86C1]", 
+  "bg-[#21618C]", "bg-[#1B4F72]",
+
+  // PURPLES (68-84)
+  "bg-[#800080]", "bg-[#8B008B]", "bg-[#9400D3]", "bg-[#9932CC]", "bg-[#BA55D3]", 
+  "bg-[#DA70D6]", "bg-[#EE82EE]", "bg-[#D8BFD8]", "bg-[#DDA0DD]", "bg-[#AF7AC5]", 
+  "bg-[#A569BD]", "bg-[#8E44AD]", "bg-[#7D3C98]", "bg-[#6C3483]", "bg-[#5B2C6F]", 
+  "bg-[#4A235A]", "bg-[#663399]",
+
+  // PINKS & MAGENTA (85-100)
+  "bg-[#FF00FF]", "bg-[#FF1493]", "bg-[#FF69B4]", "bg-[#FFB6C1]", "bg-[#FFC0CB]", 
+  "bg-[#DB7093]", "bg-[#C71585]", "bg-[#E91E63]", "bg-[#D81B60]", "bg-[#AD1457]", 
+  "bg-[#880E4F]", "bg-[#F06292]", "bg-[#F48FB1]", "bg-[#F8BBD0]", "bg-[#EC407A]", 
+  "bg-[#D2128E]"
 ];
 
 const DayState: React.FC<DayStateProps> = ({
@@ -41,7 +73,6 @@ const DayState: React.FC<DayStateProps> = ({
     const isCustomWeekend = offerId !== null;
     
     let bgColor = 'bg-blue-50'; 
-  
     if (isCustomWeekend) {
       bgColor = 'bg-red-300 hover:bg-red-400'; 
     } else if (isWeekend) {

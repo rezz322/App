@@ -23,21 +23,25 @@ interface OfferProps {
 }
 
 
-export default function Offer({ task, tasks, refreshTasks }: OfferProps) {
+export default function Offer({ task,  refreshTasks }: OfferProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedTask, setEditedTask] = useState<Task>(task);
 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
+        console.log(name, value);
+        
         setEditedTask((prevData) => ({
             ...prevData,
             [name]:
                 name === 'name'
                     ? value
-                    : name.startsWith('date')
-                        ? new Date(value).getTime() // Получаем мс
-                        : parseInt(value, 10),
+                    : name === 'date'
+                    ? new Date(value).getTime()
+                    : value === ''
+                    ? 0
+                    : parseInt(value, 10),
         }));
     };
 
@@ -56,65 +60,10 @@ const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const handleUpdate = async () => {
         try {
             console.log(editedTask);
-            const normalizeMs = (value: number) => (value < 1e12 ? value * 1000 : value);
-
-            if (tasks) {
-                const proposedStartMs = normalizeMs(Number(editedTask.date_working));
-                const proposedDaysSet = new Set<string>();
-                const days1 = Math.ceil(Number(editedTask.field1) / 8) || 0;
-                const days2 = Math.ceil(Number(editedTask.field2) / 8) || 0;
-                const getWorkingDaysForDilytsia = (startMs: number, hours: number, offsetDays: number) => {
-
-                    const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
-                    const addDays = (d: Date, days: number) => { const res = new Date(d); res.setDate(res.getDate() + days); return res; };
-                    const toIsoDay = (d: Date) => d.toISOString().split('T')[0];
-                    const days: string[] = [];
-                    if (!hours || hours <= 0) return days;
-                    const startDate = new Date(startMs);
-                    let current = new Date(startDate);
-                    let off = offsetDays;
-                    while (off > 0) {
-                        current = addDays(current, 1);
-                        if (!isWeekend(current)) off--;
-                    }
-                    const needed = Math.max(1, Math.ceil(hours / 8));
-                    let count = 0;
-                    while (count < needed) {
-                        if (!isWeekend(current)) {
-                            days.push(toIsoDay(current));
-                            count++;
-                        }
-                        current = addDays(current, 1);
-                    }
-                    return days;
-                };
-
-                getWorkingDaysForDilytsia(proposedStartMs, editedTask.field1, 0).forEach(d => proposedDaysSet.add(d + '-field1'));
-                getWorkingDaysForDilytsia(proposedStartMs, editedTask.field2, days1).forEach(d => proposedDaysSet.add(d + '-field2'));
-                getWorkingDaysForDilytsia(proposedStartMs, editedTask.field3, days1 + days2).forEach(d => proposedDaysSet.add(d + '-field3'));
-
-                const occupied = new Map<string, number>();
-                tasks.forEach((t) => {
-                    if (t.id === editedTask.id || t.is_comlited === 1) return;
-                    const startMs = normalizeMs(Number(t.date_working));
-                    const tDays1 = Math.ceil(Number(t.field1) / 8) || 0;
-                    const tDays2 = Math.ceil(Number(t.field2) / 8) || 0;
-                    getWorkingDaysForDilytsia(startMs, t.field1, 0).forEach(d => occupied.set(d + '-field1', t.id));
-                    getWorkingDaysForDilytsia(startMs, t.field2, tDays1).forEach(d => occupied.set(d + '-field2', t.id));
-                    getWorkingDaysForDilytsia(startMs, t.field3, tDays1 + tDays2).forEach(d => occupied.set(d + '-field3', t.id));
-                });
-
-                const conflict = [...proposedDaysSet].some(k => occupied.has(k));
-                if (conflict) {
-                    alert('Цей період вже зайнятий іншим замовленням. Виберіть іншу дату/години.');
-                    return;
-                }
-            }
-
             const response: { info: string, data: Task } = await invoke("update_task_command", {
                 id: editedTask.id,
                 name: editedTask.name,
-                date: editedTask.date_working, 
+                date: editedTask.date_working*1000, 
                 field1: editedTask.field1,
                 field2: editedTask.field2,
                 field3: editedTask.field3,
@@ -122,10 +71,10 @@ const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
             });
 
             if (response.info === "Success") {
-                alert("Task updated successfully!");
+                console.log(editedTask);
+                
                 setIsEditing(false);
                 refreshTasks();
-                try { window.dispatchEvent(new CustomEvent('tasksUpdated')); } catch(e) { }
             } else {
                 alert(`Error updating task: ${response.info}`);
             }
@@ -215,7 +164,6 @@ const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
                         </div>
                     </div>
                 </td>
-                // ...
             ) : (
                 <>
                     <td className="py-2 px-4">{task.id}</td>
@@ -225,6 +173,7 @@ const handleToggleComplete = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     <td className="py-2 px-4">{task.field2}</td>
                     <td className="py-2 px-4">{task.field3}</td>
                     <td className="py-2 px-4">{new Date(task.date_materials * 1000).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}.</td>
+                    <td className="py-2 px-4">{new Date(task.date_working * 1000).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}.</td>
                     <td className="py-2 px-4">{new Date(task.date_complited * 1000).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}.</td>
                     <td className="py-2 px-4 flex items-center space-x-2">
                         <input
