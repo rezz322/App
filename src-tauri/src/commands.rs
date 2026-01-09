@@ -1,59 +1,51 @@
-use tauri::State;
-use serde::{Deserialize, Serialize};
-use crate::db::modal::{Task, Offer};
-use crate::db::servise::{create_task, get_task, update_task, delete_task, create_offer, get_offer, delete_aii_offer, delete_offer, update_check};
+use crate::db::modal::{Offer, Task};
+use crate::db::servise::{
+    create_offer, create_task, delete_aii_offer, delete_offer, delete_task,
+    find_available_start_date, get_offer, get_task, update_check, update_task,
+};
 use crate::AppState;
-
-
+use serde::{Deserialize, Serialize};
+use tauri::State;
 
 #[derive(Debug, Serialize, Deserialize)]
 enum MessageType {
     Erorr,
     Success,
     Info,
-
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Message<T>{
+pub struct Message<T> {
     data: T,
-    info: MessageType
+    info: MessageType,
 }
 
-
 #[tauri::command]
-pub fn create_task_command(    
+pub fn create_task_command(
     state: State<AppState>,
-    name:String,
+    name: String,
     date: i64,
     field1: i32,
     field2: i32,
     field3: i32,
-
-)->Message<Task>
-    {
+) -> Message<Task> {
     let conn = state.conn.lock().unwrap();
-    let tasks = create_task(
-        &conn, name, date, field1, field2, field3
-    ).unwrap();
+    let tasks = create_task(&conn, name, date, field1, field2, field3).unwrap();
 
-
-    return Message::<Task>{
-         data: tasks,
-         info: MessageType::Success,
+    return Message::<Task> {
+        data: tasks,
+        info: MessageType::Success,
     };
-        
 }
 
 #[tauri::command]
-pub fn get_all_task_command(state:State<AppState>)->Message<Vec<Task>>{
+pub fn get_all_task_command(state: State<AppState>) -> Message<Vec<Task>> {
     let conn = state.conn.lock().unwrap();
     let tasks = get_task(&conn).expect("Get");
-    return Message::<Vec<Task>>{
-         data: tasks,
-         info: MessageType::Success,
+    return Message::<Vec<Task>> {
+        data: tasks,
+        info: MessageType::Success,
     };
-        
 }
 
 #[tauri::command]
@@ -67,7 +59,6 @@ pub fn update_task_command(
     field3: i32,
     is_comlited: i8,
 ) -> Message<Task> {
-
     let conn = state.conn.lock().unwrap();
     match update_task(&conn, id, name, date, field1, field2, field3, is_comlited) {
         Ok(task) => Message {
@@ -97,74 +88,88 @@ pub fn update_task_command(
 }
 
 #[tauri::command]
-pub fn delete_task_command(
-    state: State<AppState>,
-    id: i32,
-) -> Message<i32> {
+pub fn delete_task_command(state: State<AppState>, id: i32) -> Message<i32> {
     let conn = state.conn.lock().unwrap();
     let del_task = delete_task(&conn, id).unwrap();
-    return  Message::<i32> {
+    return Message::<i32> {
         data: del_task,
         info: MessageType::Success,
-    }
+    };
 }
 
 #[tauri::command]
-pub fn create_offer_command(    
+pub fn create_offer_command(
     state: State<AppState>,
-    day:i32,
-    month:i32,
-    year:i32,
-    )->Message<Offer>{    let conn = state.conn.lock().unwrap();
-    println!("Create offer command called with day: {}, month: {}, year: {}", day, month, year);
-    let offer = create_offer(
-        &conn, day, month, year
-    ).unwrap(); 
+    day: i32,
+    month: i32,
+    year: i32,
+) -> Message<Offer> {
+    let conn = state.conn.lock().unwrap();
+    println!(
+        "Create offer command called with day: {}, month: {}, year: {}",
+        day, month, year
+    );
+    let offer = create_offer(&conn, day, month, year).unwrap();
 
-    return Message::<Offer>{
-         data: offer,
-         info: MessageType::Success,
-    };   
+    return Message::<Offer> {
+        data: offer,
+        info: MessageType::Success,
+    };
 }
 
 #[tauri::command]
-pub fn update_task_check_command(state: State<AppState>, id: i32, is_comlited:bool) -> i32 {
-    let conn: std::sync::MutexGuard<'_, rusqlite::Connection> =  state.conn.lock().unwrap();
+pub fn update_task_check_command(state: State<AppState>, id: i32, is_comlited: bool) -> i32 {
+    let conn: std::sync::MutexGuard<'_, rusqlite::Connection> = state.conn.lock().unwrap();
     let data = update_check(&conn, id, is_comlited).unwrap();
     data
 }
 
 #[tauri::command]
-pub fn get_all_offer_command(state:State<AppState>)->Message<Vec<Offer>>{
+pub fn get_all_offer_command(state: State<AppState>) -> Message<Vec<Offer>> {
     let conn = state.conn.lock().unwrap();
     let offers = get_offer(&conn).expect("Get");
-    return Message::<Vec<Offer>>{
-         data: offers,
-         info: MessageType::Success,
+    return Message::<Vec<Offer>> {
+        data: offers,
+        info: MessageType::Success,
     };
 }
 
 #[tauri::command]
-pub fn delete_all_offer_command(
-    state: State<AppState>,
-) -> Message<usize> {
+pub fn delete_all_offer_command(state: State<AppState>) -> Message<usize> {
     let conn = state.conn.lock().unwrap();
     let answer = delete_aii_offer(&conn).unwrap();
-    return  Message::<usize> {
+    return Message::<usize> {
         data: answer,
         info: MessageType::Success,
-    }
+    };
 }
 
 #[tauri::command]
-pub fn delete_offer_command(
-    state: State<AppState>,
-    id: i32,
-) -> Message<usize> {
+pub fn delete_offer_command(state: State<AppState>, id: i32) -> Message<usize> {
     let conn = state.conn.lock().unwrap();
     let answer = delete_offer(&conn, id).unwrap();
-    return  Message::<usize> {
+    return Message::<usize> {
         data: answer,
         info: MessageType::Success,
+    };
+}
+
+#[tauri::command]
+pub fn get_next_available_date_command(
+    state: State<AppState>,
+    field1: i32,
+    field2: i32,
+    field3: i32,
+) -> Message<i64> {
+    let conn = state.conn.lock().unwrap();
+    match find_available_start_date(&conn, field1, field2, field3) {
+        Ok(date) => Message {
+            data: date,
+            info: MessageType::Success,
+        },
+        Err(_) => Message {
+            data: 0,
+            info: MessageType::Erorr,
+        },
     }
-}   
+}

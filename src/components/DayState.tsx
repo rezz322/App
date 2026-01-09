@@ -30,16 +30,16 @@ const DayState: React.FC<DayStateProps> = ({
   const getBackgroundColor = () => {
     if (isWorkingPeriod) {
       switch (color) {
-        case 1: return "bg-blue-100 border-blue-200";
-        case 2: return "bg-green-100 border-green-200";
-        case 3: return "bg-purple-100 border-purple-200";
-        case 4: return "bg-yellow-100 border-yellow-200";
-        case 5: return "bg-pink-100 border-pink-200";
-        default: return "bg-blue-50 border-blue-100";
+        case 1: return "bg-blue-400 border-blue-200";
+        case 2: return "bg-green-400 border-green-200";
+        case 3: return "bg-purple-400 border-purple-200";
+        case 4: return "bg-yellow-400 border-yellow-200";
+        case 5: return "bg-black border-black";
+        default: return "bg-blue-400 border-blue-100";
       }
     }
-    if (isWeekend) return "bg-gray-100 border-gray-200 opacity-60";
-    return "bg-white border-gray-100 hover:bg-gray-50";
+    if (isWeekend) return "bg-red-400 border-red-200 opacity-60";
+    return "bg-gray-100 border-gray-100 hover:bg-gray-50";
   };
 
   const getTextColor = () => {
@@ -61,17 +61,17 @@ const DayState: React.FC<DayStateProps> = ({
           </span>
         )}
         {offerId && (
-            <button 
-                onClick={(e) => { e.stopPropagation(); ondaydelete(offerId); }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded text-red-500 transition-opacity"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); ondaydelete(offerId); }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded text-red-500 transition-opacity"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         )}
       </div>
-      
+
       <div className="space-y-1 overflow-hidden">
         {taskNames && taskNames.split(',').map((name, i) => (
           <div key={i} className="text-[10px] truncate leading-tight bg-white/50 rounded px-1 py-0.5 mb-1" title={name.trim()}>

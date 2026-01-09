@@ -99,6 +99,7 @@ export default function Offer({ task, onUpdate, onDelete, onStatusToggle }: Offe
             <td className="py-2 px-4 text-center">{task.field2}</td>
             <td className="py-2 px-4 text-center">{task.field3}</td>
             <td className="py-2 px-4 text-gray-600">{formatUkDayMonth(task.date_materials)}</td>
+            <td className="py-2 px-4 text-gray-600">{formatUkDayMonth(task.date_working)}</td>
             <td className="py-2 px-4 text-gray-600">{formatUkDayMonth(task.date_complited)}</td>
             <td className="py-2 px-4">
                 <div className="flex items-center space-x-3">

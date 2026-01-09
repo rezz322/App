@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Task, FormData } from '../types';
-import { getTodayDateString, formatUkDateTime } from '../utils/dateUtils';
+import React, { useState, useEffect } from 'react';
+import { invoke } from "@tauri-apps/api/core";
+import { Task, FormData, Message } from '../types';
+import { getAvailableDate } from '../utils/dateUtils';
 
 interface TaskFormProps {
   tasks: Task[];
@@ -16,20 +17,37 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
     field3: 0,
   });
 
-  const getNextAvailableTime = (fieldKey: 'field1_end' | 'field2_end' | 'field3_end') => {
-    let latestEndTime = 0;
-    tasks
-      .filter(task => task.is_comlited === 0)
-      .forEach(task => {
-        const currentEndTime = (task[fieldKey] || 0) * 1000;
-        if (currentEndTime > latestEndTime) {
-          latestEndTime = currentEndTime;
-        }
-      });
+  useEffect(() => {
+    const calculateDate = async () => {
+      // Only calculate if at least one field has hours
+      if (formData.field1 > 0 || formData.field2 > 0 || formData.field3 > 0) {
+        try {
+          const response: Message<number> = await invoke("get_next_available_date_command", {
+            field1: Number(formData.field1),
+            field2: Number(formData.field2),
+            field3: Number(formData.field3)
+          });
 
-    if (latestEndTime === 0) return "Вільна";
-    const nextAvailableDate = new Date(latestEndTime + 24 * 60 * 60 * 1000);
-    return formatUkDateTime(nextAvailableDate);
+          if (response.info === "Success" && response.data > 0) {
+            // response.data is seconds, convert to ms
+            setFormData(prev => ({ ...prev, date: response.data * 1000 }));
+          }
+        } catch (e) {
+          console.error("Failed to calculate date:", e);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(calculateDate, 500); // Debounce 500ms
+    return () => clearTimeout(timeoutId);
+  }, [formData.field1, formData.field2, formData.field3]);
+
+  const getNextAvailableTime = (fieldKey: 'field1_end' | 'field2_end' | 'field3_end') => {
+    // Determine the field name from fieldKey (remove _end)
+    const fieldName = fieldKey.replace('_end', '');
+    console.log(fieldName);
+    
+    return getAvailableDate(tasks, fieldName);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,10 +58,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
         name === 'name'
           ? value
           : name === 'date'
-          ? new Date(value).getTime()
-          : value === ''
-          ? 0
-          : parseInt(value, 10),
+            ? new Date(value).getTime()
+            : value === ''
+              ? 0
+              : parseInt(value, 10),
     }));
   };
 
@@ -80,13 +98,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
         </div>
 
         <div className="mb-4 max-w-xs">
-          <label htmlFor="startDate" className="block text-gray-700 text-sm font-bold mb-2">Дата початку *</label>
+          <label className="block text-gray-700 text-sm font-bold mb-2">Дата початку (Автоматично)</label>
           <div className="relative">
-            <input type="date" id="startDate" name="date" value={formData.date ? new Date(formData.date).toISOString().split('T')[0] : ''} onChange={handleChange} min={getTodayDateString()} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline pr-10" required />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-400">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5m16.5 7.5v-7.5" />
-              </svg>
+            <div className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 min-h-[38px]">
+              {formData.date ? new Date(formData.date).toLocaleDateString('uk-UA') : 'Очікування вводу...'}
             </div>
           </div>
         </div>
@@ -95,16 +110,18 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
             <label htmlFor="area1" className="block text-gray-700 text-sm font-bold mb-2">Дільниця 1 (год)</label>
-            <input type="number" id="area1" name="field1" value={formData.field1 === 0 ? '' : formData.field1} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+            <input type="number" id="area1" name="field1" value={formData.field1 === 0 ? '' : formData.field1} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
             <p className="text-xs text-gray-500 mt-1">Наступна доступна: **{getNextAvailableTime('field1_end')}**</p>
           </div>
           <div>
             <label htmlFor="area2" className="block text-gray-700 text-sm font-bold mb-2">Дільниця 2 (год)</label>
-            <input type="number" id="area2" name="field2" value={formData.field2 === 0 ? '' : formData.field2} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+            <input type="number" id="area2" name="field2" value={formData.field2 === 0 ? '' : formData.field2} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+            <p className="text-xs text-gray-500 mt-1">Наступна доступна: **{getNextAvailableTime('field2_end')}**</p>
           </div>
           <div>
             <label htmlFor="area3" className="block text-gray-700 text-sm font-bold mb-2">Дільниця 3 (год)</label>
-            <input type="number" id="area3" name="field3" value={formData.field3 === 0 ? '' : formData.field3} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+            <input type="number" id="area3" name="field3" value={formData.field3 === 0 ? '' : formData.field3} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+            <p className="text-xs text-gray-500 mt-1">Наступна доступна: **{getNextAvailableTime('field3_end')}**</p>
           </div>
         </div>
 

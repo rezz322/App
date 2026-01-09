@@ -7,9 +7,9 @@ export interface Task {
   field1: number;
   field2: number;
   field3: number;
-  field1_end?: number;
-  field2_end?: number;
-  field3_end?: number;
+  field1_end: number;
+  field2_end: number;
+  field3_end: number;
   all_hour: number;
   is_comlited: number;
   collor?: number; // Noted as collor and color in different files

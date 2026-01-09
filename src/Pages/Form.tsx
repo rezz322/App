@@ -83,14 +83,19 @@ export default function Dashboard() {
                             <table className="min-w-full bg-white">
                                 <thead>
                                     <tr className="bg-gray-50 border-b">
-                                        {(['id', 'name', 'all_hour', 'field1', 'field2', 'field3', 'date_materials', 'date_complited'] as (keyof Task)[]).map((col) => (
-                                            <th 
+                                        {(['id', 'name', 'all_hour', 'field1', 'field2', 'field3', 'date_materials', 'date_working', 'date_complited'] as (keyof Task)[]).map((col) => (
+                                            <th
                                                 key={col}
                                                 className="py-3 px-4 text-gray-700 font-semibold text-left text-sm uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                                                 onClick={() => handleSort(col)}
                                             >
                                                 <div className="flex items-center space-x-1">
-                                                    <span>{col === 'all_hour' ? 'Години' : col === 'id' ? 'ID' : col.replace('field', 'Дільниця ').replace('date_', 'Дата ')}</span>
+                                                    <span>{
+                                                        col === 'all_hour' ? 'Години' :
+                                                            col === 'id' ? 'ID' :
+                                                                col === 'date_working' ? 'Дата початку' :
+                                                                    col.replace('field', 'Дільниця ').replace('date_', 'Дата ')
+                                                    }</span>
                                                     {sortColumn === col && (
                                                         <span className="text-blue-500">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                                                     )}
@@ -102,10 +107,10 @@ export default function Dashboard() {
                                 </thead>
                                 <tbody>
                                     {sortedTasks.map((task) => (
-                                        <Offer 
-                                            key={task.id} 
-                                            task={task} 
-                                            tasks={tasks} 
+                                        <Offer
+                                            key={task.id}
+                                            task={task}
+                                            tasks={tasks}
                                             refreshTasks={fetchTasks}
                                             onUpdate={updateTask}
                                             onDelete={deleteTask}
