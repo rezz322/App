@@ -5,6 +5,7 @@ interface DashboardStatsProps {
   tasks: Task[];
 }
 
+// Component to display overall task statistics on the dashboard
 const DashboardStats: React.FC<DashboardStatsProps> = ({ tasks }) => {
   const totalHours = tasks.reduce((sum, task) => sum + task.all_hour, 0).toFixed(1);
   const activeTasks = tasks.filter(task => task.is_comlited === 0).length;

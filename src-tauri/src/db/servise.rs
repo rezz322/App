@@ -34,73 +34,92 @@ fn is_holiday(date: &DateTime<Utc>, holidays: &Vec<Offer>) -> bool {
     false
 }
 
-fn get_time(date: i64, field1: i32, field2: i32, field3: i32, holidays: &Vec<Offer>) -> Time {
-    let current_dt = Utc.timestamp_opt(date / 1000, 0).unwrap();
-    println!("{}", current_dt);
-    // current_dt += Duration::days(1);
+/// Рассчитывает все временные метки для задачи (дату начала, окончания этапов, завершения и закупки материалов).
+fn get_time(
+    date: i64,
+    field1: i32,
+    field2: i32,
+    field3: i32,
+    holidays: &Vec<Offer>,
+    existing_tasks: &Vec<Task>,
+) -> Time {
+    // Преобразуем входящий timestamp (в мс) в DateTime<Utc>
+    let usage1 = calculate_daily_usage(existing_tasks, 1, holidays);
+    let usage2 = calculate_daily_usage(existing_tasks, 2, holidays);
+    let usage3 = calculate_daily_usage(existing_tasks, 3, holidays);
 
-    let mut data_w = current_dt;
+    let mut current = Utc.timestamp_opt(date / 1000, 0).unwrap();
 
-    // Initial check: if start date is weekend or holiday, move forward
-    while data_w.weekday() == Weekday::Sat
-        || data_w.weekday() == Weekday::Sun
-        || is_holiday(&data_w, holidays)
+    let mut task_start_date = 0;
+
+    // 1. ПОИСК ПЕРВОГО РАБОЧЕГО ДНЯ ПО УМОЛЧАНИЮ
+    while current.weekday() == Weekday::Sat
+        || current.weekday() == Weekday::Sun
+        || is_holiday(&current, holidays)
     {
-        data_w = data_w + Duration::days(1);
+        current = current + Duration::days(1);
+    }
+    let data_w = current.timestamp();
+
+    // 2. РАСЧЕТ ОКОНЧАНИЯ ЭТАПОВ (Field 1, 2, 3) С УЧЕТОМ ЗАГРУЗКИ
+    let mut f1_end = data_w;
+    if field1 > 0 {
+        let (s, e) = find_slot(&usage1, current, field1, holidays);
+        task_start_date = s;
+        let mut next = Utc.timestamp_opt(e, 0).unwrap() + Duration::days(1);
+        while next.weekday() == Weekday::Sat
+            || next.weekday() == Weekday::Sun
+            || is_holiday(&next, holidays)
+        {
+            next = next + Duration::days(1);
+        }
+        f1_end = next.timestamp();
+        current = next;
     }
 
-    let mut current = data_w;
-
-    let allocate_block = |hours: i32, cur: &mut chrono::DateTime<Utc>| -> Option<i64> {
-        if hours <= 0 {
-            return None;
+    let mut f2_end = f1_end;
+    if field2 > 0 {
+        let (s, e) = find_slot(&usage2, current, field2, holidays);
+        if task_start_date == 0 {
+            task_start_date = s;
         }
-
-        let needed_days: i64 = ((hours as i64) + 7) / 8;
-        if needed_days <= 0 {
-            return Some(cur.timestamp());
+        let mut next = Utc.timestamp_opt(e, 0).unwrap() + Duration::days(1);
+        while next.weekday() == Weekday::Sat
+            || next.weekday() == Weekday::Sun
+            || is_holiday(&next, holidays)
+        {
+            next = next + Duration::days(1);
         }
+        f2_end = next.timestamp();
+        current = next;
+    }
 
-        let mut counted_days = 0i64;
-        let last_day_ts = loop {
-            let is_weekend = cur.weekday() == Weekday::Sat || cur.weekday() == Weekday::Sun;
-            let is_hol = is_holiday(cur, holidays);
+    let mut f3_end = f2_end;
+    if field3 > 0 {
+        let (s, e) = find_slot(&usage3, current, field3, holidays);
+        if task_start_date == 0 {
+            task_start_date = s;
+        }
+        let mut next = Utc.timestamp_opt(e, 0).unwrap() + Duration::days(1);
+        while next.weekday() == Weekday::Sat
+            || next.weekday() == Weekday::Sun
+            || is_holiday(&next, holidays)
+        {
+            next = next + Duration::days(1);
+        }
+        f3_end = next.timestamp();
+        current = next;
+    }
 
-            if !is_weekend && !is_hol {
-                counted_days += 1;
-                if counted_days >= needed_days {
-                    let timestamp = cur.timestamp();
-                    *cur = *cur + Duration::days(1);
-                    break timestamp;
-                }
-            }
-            println!(
-                "field3_end: {:?} fdfdf",
-                DateTime::from_timestamp(cur.timestamp(), 0)
-            );
-            *cur = *cur + Duration::days(1);
-        };
-        Some(last_day_ts)
+    let final_data_w = if task_start_date != 0 {
+        task_start_date
+    } else {
+        data_w
     };
 
-    let mut field1_end: i64 = data_w.timestamp();
-    if let Some(ts) = allocate_block(field1, &mut current) {
-        field1_end = ts;
-    }
-
-    let mut field2_end: i64 = field1_end;
-    if let Some(ts) = allocate_block(field2, &mut current) {
-        field2_end = ts;
-    }
-
-    let mut field3_end: i64 = field2_end;
-    println!("field3_end: {:?}", DateTime::from_timestamp(field3_end, 0));
-
-    let date_complited = current - Duration::days(1);
-
-    let mut data_materials = data_w;
+    // 3. РАСЧЕТ ДАТЫ ПОСТАВКИ МАТЕРИАЛОВ (data_materials)
+    let mut data_materials = Utc.timestamp_opt(final_data_w, 0).unwrap();
     let mut back_count = 0i32;
-
     while back_count < 2 {
         data_materials = data_materials - Duration::days(1);
         if data_materials.weekday() != Weekday::Sat
@@ -112,15 +131,14 @@ fn get_time(date: i64, field1: i32, field2: i32, field3: i32, holidays: &Vec<Off
     }
 
     let all_h = field1 + field2 + field3;
-    println!("all_h: {:?}", DateTime::from_timestamp(field3_end, 0));
     Time {
         all_h,
         data_materials: data_materials.timestamp(),
-        date_complited: date_complited.timestamp(),
-        data_w: data_w.timestamp(),
-        field1_end,
-        field2_end,
-        field3_end,
+        date_complited: (current - Duration::days(1)).timestamp(),
+        data_w: final_data_w,
+        field1_end: f1_end,
+        field2_end: f2_end,
+        field3_end: f3_end,
     }
 }
 
@@ -171,7 +189,8 @@ pub fn create_task(
 ) -> Result<Task, rusqlite::Error> {
     // Fetch offers (holidays)
     let offers = get_offer(conn)?;
-    let time = get_time(date, field1, field2, field3, &offers);
+    let tasks = get_task(conn)?;
+    let time = get_time(date, field1, field2, field3, &offers, &tasks);
 
     let collor = generate_random_int();
     let mut stmt = conn
@@ -242,7 +261,9 @@ pub fn update_task(
 ) -> Result<Task, rusqlite::Error> {
     // Fetch offers (holidays)
     let offers = get_offer(conn)?;
-    let time = get_time(date, field1, field2, field3, &offers);
+    let all_tasks = get_task(conn)?;
+    let existing_tasks: Vec<Task> = all_tasks.iter().filter(|t| t.id != id).cloned().collect();
+    let time = get_time(date, field1, field2, field3, &offers, &existing_tasks);
 
     let mut stmt = conn
         .prepare(
@@ -279,6 +300,11 @@ pub fn update_task(
     ])
     .unwrap();
 
+    let current_color = all_tasks
+        .iter()
+        .find(|t| t.id == id)
+        .map(|t| t.collor)
+        .unwrap_or(0);
     let answer = Task {
         id: id,
         name: name,
@@ -293,7 +319,7 @@ pub fn update_task(
         field3_end: time.field3_end,
         all_hour: time.all_h,
         is_comlited: is_comlited,
-        collor: 0,
+        collor: current_color,
     };
     Ok(answer)
 }
@@ -351,14 +377,12 @@ pub fn delete_offer(conn: &Connection, id: i32) -> result::Result<usize, rusqlit
 }
 
 pub fn update_check(conn: &Connection, id: i32, is_comlited: bool) -> Result<i32, rusqlite::Error> {
-    println!("поменял");
-    println!("{}", is_comlited);
     let mut stmt = conn
         .prepare("UPDATE task SET is_comlited = ?2 WHERE id = ?1")
         .unwrap();
     stmt.execute(params![id, is_comlited,]).unwrap();
 
-    Ok((id))
+    Ok(id)
 }
 
 fn calculate_daily_usage(
@@ -368,7 +392,40 @@ fn calculate_daily_usage(
 ) -> HashMap<i64, i32> {
     let mut usage = HashMap::new();
 
-    for task in tasks {
+    // Создаем копию для сортировки
+    let mut sorted_tasks = tasks.clone();
+    sorted_tasks.sort_by(|a, b| {
+        let get_start = |t: &Task| {
+            if field_idx == 1 {
+                t.date_working
+            } else if field_idx == 2 {
+                if t.field1 > 0 {
+                    t.field1_end
+                } else {
+                    t.date_working
+                }
+            } else if field_idx == 3 {
+                if t.field2 > 0 {
+                    t.field2_end
+                } else if t.field1 > 0 {
+                    t.field1_end
+                } else {
+                    t.date_working
+                }
+            } else {
+                t.date_working
+            }
+        };
+        let start_a = get_start(a);
+        let start_b = get_start(b);
+        if start_a != start_b {
+            start_a.cmp(&start_b)
+        } else {
+            a.id.cmp(&b.id)
+        }
+    });
+
+    for task in sorted_tasks {
         if task.is_comlited == 1 {
             continue;
         }
@@ -378,7 +435,7 @@ fn calculate_daily_usage(
             1 => (task.date_working, task.field1),
             2 => {
                 let s = if task.field1 > 0 {
-                    task.field1_end + 86400
+                    task.field1_end
                 } else {
                     task.date_working
                 };
@@ -386,15 +443,11 @@ fn calculate_daily_usage(
             }
             3 => {
                 let s2 = if task.field1 > 0 {
-                    task.field1_end + 86400
+                    task.field1_end
                 } else {
                     task.date_working
                 };
-                let s3 = if task.field2 > 0 {
-                    task.field2_end + 86400
-                } else {
-                    s2
-                };
+                let s3 = if task.field2 > 0 { task.field2_end } else { s2 };
                 (s3, task.field3)
             }
             _ => (0, 0),
@@ -405,7 +458,7 @@ fn calculate_daily_usage(
         }
 
         let mut current = Utc.timestamp_opt(start_date, 0).unwrap();
-        // Skip initial non-working days (though start_date should be valid from DB)
+        // Skip initial non-working days
         while current.weekday() == Weekday::Sat
             || current.weekday() == Weekday::Sun
             || is_holiday(&current, holidays)
@@ -416,19 +469,24 @@ fn calculate_daily_usage(
         let mut hours_remaining = hours;
         while hours_remaining > 0 {
             let ts = current.timestamp();
-            let current_usage = usage.entry(ts).or_insert(0);
-            let chunk = std::cmp::min(hours_remaining, 8);
+            let used = *usage.get(&ts).unwrap_or(&0);
+            let available = 8 - used;
 
-            *current_usage += chunk;
-            hours_remaining -= chunk;
+            if available > 0 {
+                let take = std::cmp::min(hours_remaining, available);
+                *usage.entry(ts).or_insert(0) += take;
+                hours_remaining -= take;
+            }
 
-            loop {
-                current = current + Duration::days(1);
-                if current.weekday() != Weekday::Sat
-                    && current.weekday() != Weekday::Sun
-                    && !is_holiday(&current, holidays)
-                {
-                    break;
+            if hours_remaining > 0 {
+                loop {
+                    current = current + Duration::days(1);
+                    if current.weekday() != Weekday::Sat
+                        && current.weekday() != Weekday::Sun
+                        && !is_holiday(&current, holidays)
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -538,8 +596,8 @@ pub fn find_available_start_date(
                 if task_start_date == 0 {
                     task_start_date = start;
                 }
-                // Chain the next field to start after this field ends (same day allowed)
-                start_from = Utc.timestamp_opt(end, 0).unwrap();
+                // Chain the next field to start after this field ends (ensure next day)
+                start_from = Utc.timestamp_opt(end, 0).unwrap() + Duration::days(1);
             }
         }};
     }

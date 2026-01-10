@@ -29,12 +29,18 @@ export interface Message<T> {
 }
 
 export interface FormData {
-  date: number;
+  date_working: number;
   name: string;
   field1: number;
   field2: number;
   field3: number;
 }
+
+export type TaskSummary = {
+  name: string;
+  hours: number;
+  color: number;
+};
 
 export type DayStateItem = {
   day: number;
@@ -43,7 +49,7 @@ export type DayStateItem = {
   totalHours: number;
   yer: number;
   month: number;
-  tasks: string;
+  tasks: TaskSummary[];
   isWorking: boolean;
   color: number;
   offerId: number | null;

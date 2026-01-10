@@ -1,4 +1,5 @@
 import React from "react";
+import { TaskSummary } from "../types";
 
 interface DayStateProps {
   dayNumber: number;
@@ -6,11 +7,10 @@ interface DayStateProps {
   totalHours: number;
   yer: number;
   month: number;
-  taskNames: string;
+  tasks: TaskSummary[];
   isWorkingPeriod: boolean;
   onDayClick: (day: number, yer: number, month: number) => void;
   ondaydelete: (id: number) => void;
-  color: number;
   offerId: number | null;
 }
 
@@ -20,24 +20,14 @@ const DayState: React.FC<DayStateProps> = ({
   totalHours,
   yer,
   month,
-  taskNames,
+  tasks,
   isWorkingPeriod,
   onDayClick,
   ondaydelete,
-  color,
   offerId,
 }) => {
   const getBackgroundColor = () => {
-    if (isWorkingPeriod) {
-      switch (color) {
-        case 1: return "bg-blue-400 border-blue-200";
-        case 2: return "bg-green-400 border-green-200";
-        case 3: return "bg-purple-400 border-purple-200";
-        case 4: return "bg-yellow-400 border-yellow-200";
-        case 5: return "bg-black border-black";
-        default: return "bg-blue-400 border-blue-100";
-      }
-    }
+    if (isWorkingPeriod) return "bg-blue-50 border-blue-200 hover:bg-white transition-colors text-blue-900";
     if (isWeekend) return "bg-red-400 border-red-200 opacity-60";
     return "bg-gray-100 border-gray-100 hover:bg-gray-50";
   };
@@ -46,6 +36,22 @@ const DayState: React.FC<DayStateProps> = ({
     if (isWorkingPeriod) return "text-blue-900";
     if (isWeekend) return "text-gray-400";
     return "text-gray-700";
+  };
+
+  const getTaskColor = (taskColor: number) => {
+    switch (taskColor) {
+      case 1: return "bg-blue-100 text-blue-800 border-blue-200";
+      case 2: return "bg-green-100 text-green-800 border-green-200";
+      case 3: return "bg-purple-100 text-purple-800 border-purple-200";
+      case 4: return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case 5: return "bg-pink-100 text-pink-800 border-pink-200";
+      case 6: return "bg-orange-100 text-orange-800 border-orange-200";
+      case 7: return "bg-indigo-100 text-indigo-800 border-indigo-200";
+      case 8: return "bg-teal-100 text-teal-800 border-teal-200";
+      case 9: return "bg-rose-100 text-rose-800 border-rose-200";
+      case 10: return "bg-cyan-100 text-cyan-800 border-cyan-200";
+      default: return "bg-gray-100 text-gray-800 border-gray-200";
+    }
   };
 
   return (
@@ -73,9 +79,13 @@ const DayState: React.FC<DayStateProps> = ({
       </div>
 
       <div className="space-y-1 overflow-hidden">
-        {taskNames && taskNames.split(',').map((name, i) => (
-          <div key={i} className="text-[10px] truncate leading-tight bg-white/50 rounded px-1 py-0.5 mb-1" title={name.trim()}>
-            {name.trim()}
+        {tasks && tasks.map((task, i) => (
+          <div
+            key={i}
+            className={`text-[10px] truncate border leading-tight rounded px-1 py-0.5 mb-1 shadow-sm font-medium ${getTaskColor(task.color)}`}
+            title={task.name}
+          >
+            {task.name} ({task.hours} год)
           </div>
         ))}
       </div>

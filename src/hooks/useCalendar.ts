@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Task, Offer, Message, DayStateItem } from "../types";
+import { Task, Offer, Message, DayStateItem, TaskSummary } from "../types";
 import {
   isWeekend,
   skipWeekends,
@@ -9,6 +9,7 @@ import {
   DAILY_HOUR_LIMIT
 } from "../utils/dateUtils";
 
+// Hook to manage calendar state and display logic
 export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: "field1" | "field2" | "field3") {
   const [daysState, setDaysState] = useState<DayStateItem[]>([]);
   const [initialDaysState, setInitialDaysState] = useState<DayStateItem[]>([]);
@@ -16,6 +17,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
+  // Fetches all custom weekends/holidays from the database
   const getCustomWeekends = async (): Promise<Map<string, number>> => {
     try {
       const response: Message<Offer[]> = await invoke("get_all_offer_command");
@@ -35,16 +37,29 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
     }
   };
 
+  // Main function to build the monthly days state by distributing task hours
   const buildDaysState = useCallback(async () => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const customWeekendDatesMap = await getCustomWeekends();
     const customWeekendDatesSet = new Set(customWeekendDatesMap.keys());
 
     const dailyTaskData: {
-      [key: string]: { totalHours: number; is_working: boolean; tasks: string; color: number };
+      [key: string]: { totalHours: number; is_working: boolean; tasks: TaskSummary[]; color: number };
     } = {};
 
-    const sortedTasks = [...tasks].sort((a, b) => a.date_working - b.date_working);
+    const sortedTasks = [...tasks].sort((a, b) => {
+      const getStageStart = (t: Task) => {
+        if (selectedDilytsia === "field1") return t.date_working;
+        if (selectedDilytsia === "field2") return t.field1 > 0 ? t.field1_end : t.date_working;
+        if (selectedDilytsia === "field3") {
+          if (t.field2 > 0) return t.field2_end;
+          if (t.field1 > 0) return t.field1_end;
+          return t.date_working;
+        }
+        return t.date_working;
+      };
+      return getStageStart(a) - getStageStart(b);
+    });
 
     sortedTasks.forEach((task) => {
       let remainingHours = 0;
@@ -55,25 +70,12 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
         currentDay = new Date(task.date_working * 1000);
       } else if (selectedDilytsia === "field2") {
         remainingHours = task.field2;
-        if (task.field1 > 0) {
-          currentDay = new Date(task.field1_end * 1000);
-          currentDay.setDate(currentDay.getDate() + 1);
-        } else {
-          currentDay = new Date(task.date_working * 1000);
-        }
+        currentDay = new Date((task.field1 > 0 ? task.field1_end : task.date_working) * 1000);
       } else if (selectedDilytsia === "field3") {
         remainingHours = task.field3;
-        if (task.field2 > 0) {
-          console.log(task.name, ' field2  ', new Date(task.field2_end * 1000));
-          console.log(task.name, ' field3  ', new Date(task.field3_end * 1000));
-          currentDay = new Date(task.field2_end * 1000);
-          currentDay.setDate(currentDay.getDate() + 1);
-        } else if (task.field1 > 0) {
-          currentDay = new Date(task.field1_end * 1000);
-          currentDay.setDate(currentDay.getDate() + 1);
-        } else {
-          currentDay = new Date(task.date_working * 1000);
-        }
+        let s2 = task.field1 > 0 ? task.field1_end : task.date_working;
+        let s3 = task.field2 > 0 ? task.field2_end : s2;
+        currentDay = new Date(s3 * 1000);
       } else {
         return;
       }
@@ -88,7 +90,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
         const isCustomWeekendDay = customWeekendDatesSet.has(dateKey);
 
         if (!dailyTaskData[storageKey]) {
-          dailyTaskData[storageKey] = { totalHours: 0, is_working: false, tasks: "", color: 0 };
+          dailyTaskData[storageKey] = { totalHours: 0, is_working: false, tasks: [], color: 0 };
         }
 
         if (!isStandardWeekendDay && !isCustomWeekendDay) {
@@ -102,11 +104,15 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
             dailyTaskData[storageKey].totalHours += hoursForToday;
             dailyTaskData[storageKey].is_working = true;
 
-            const existingTask = dailyTaskData[storageKey].tasks;
-            if (existingTask && !existingTask.includes(task.name)) {
-              dailyTaskData[storageKey].tasks += `, ${task.name}`;
-            } else if (!existingTask) {
-              dailyTaskData[storageKey].tasks = task.name;
+            const existingTask = dailyTaskData[storageKey].tasks.find(t => t.name === task.name);
+            if (existingTask) {
+              existingTask.hours += hoursForToday;
+            } else {
+              dailyTaskData[storageKey].tasks.push({
+                name: task.name,
+                hours: hoursForToday,
+                color: task.collor || task.color || 0
+              });
             }
             remainingHours -= hoursForToday;
           }
@@ -128,7 +134,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
       const offerId = customWeekendDatesMap.get(dateKey) || null;
       const isCustomW = offerId !== null;
       const storageKey = `${year}-${month}-${d}`;
-      const dt = dailyTaskData[storageKey] || { totalHours: 0, is_working: false, tasks: "", color: 0 };
+      const dt = dailyTaskData[storageKey] || { totalHours: 0, is_working: false, tasks: [], color: 0 };
 
       newDays.push({
         day: d,
@@ -151,22 +157,25 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
     buildDaysState();
   }, [buildDaysState]);
 
+  // Click handler for a day to create a custom weekend
   const onDayClick = async (dayNumber: number, year: number, month: number) => {
     await invoke("create_offer_command", { day: dayNumber, year, month: month + 1 });
     buildDaysState();
   };
 
+  // Deletes a custom weekend by its ID
   const onDayDelete = async (id: number) => {
     await invoke("delete_offer_command", { id });
     buildDaysState();
   };
 
+  // Resets all custom weekends and refreshes the calendar
   const resetCalendar = async () => {
     await invoke("delete_all_offer_command");
     setDaysState(initialDaysState.map((d) => ({
       ...d,
       isWeekend: isWeekend(d.date),
-      tasks: d.tasks,
+      tasks: [],
       totalHours: 0,
       isWorking: false,
       offerId: null

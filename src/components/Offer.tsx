@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Task } from "../types";
-import { formatUkDayMonth, normalizeMs } from "../utils/dateUtils";
+import React, { useState, useEffect } from 'react';
+import { invoke } from "@tauri-apps/api/core";
+import { Task, Message } from "../types";
+import { formatUkDayMonth } from "../utils/dateUtils";
 
 interface OfferProps {
     task: Task;
-    tasks?: Task[]; 
+    tasks?: Task[];
     refreshTasks: () => void;
     onUpdate: (task: any) => Promise<{ success: boolean; error?: string }>;
     onDelete: (id: number) => Promise<{ success: boolean; error?: string }>;
@@ -15,11 +16,34 @@ export default function Offer({ task, onUpdate, onDelete, onStatusToggle }: Offe
     const [isEditing, setIsEditing] = useState(false);
     const [editedTask, setEditedTask] = useState<Task>(task);
 
+    useEffect(() => {
+        const calculateDate = async () => {
+            if (isEditing && (editedTask.field1 > 0 || editedTask.field2 > 0 || editedTask.field3 > 0)) {
+                try {
+                    const response: Message<number> = await invoke("get_next_available_date_command", {
+                        field1: Number(editedTask.field1),
+                        field2: Number(editedTask.field2),
+                        field3: Number(editedTask.field3)
+                    });
+
+                    if (response.info === "Success" && response.data > 0) {
+                        setEditedTask(prev => ({ ...prev, date_working: response.data * 1000 }));
+                    }
+                } catch (e) {
+                    console.error("Failed to calculate date:", e);
+                }
+            }
+        };
+
+        const timeoutId = setTimeout(calculateDate, 500);
+        return () => clearTimeout(timeoutId);
+    }, [isEditing, editedTask.field1, editedTask.field2, editedTask.field3]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setEditedTask((prevData) => ({
             ...prevData,
-            [name]: name === 'name' ? value : name.startsWith('date') ? new Date(value).getTime() : parseInt(value, 10),
+            [name]: name === 'name' ? value : parseInt(value, 10),
         }));
     };
 
@@ -37,29 +61,27 @@ export default function Offer({ task, onUpdate, onDelete, onStatusToggle }: Offe
     };
 
     const handleDelete = async () => {
-        if (window.confirm("Ви впевнені, що хочете видалити це замовлення?")) {
-            await onDelete(task.id);
-        }
+        await onDelete(task.id);
     };
 
-    const getFormattedDate = (timestamp: number) => {
-        if (timestamp === 0 || !Number.isFinite(timestamp)) return '';
-        const dateMs = normalizeMs(timestamp);
-        return new Date(dateMs).toISOString().split('T')[0];
-    };
+
+
+
 
     if (isEditing) {
         return (
             <tr className="border-b last:border-b-0">
-                <td colSpan={9} className="p-4"> 
+                <td colSpan={9} className="p-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="flex flex-col">
                             <label className="text-xs font-bold mb-1">Назва</label>
                             <input type="text" name="name" value={editedTask.name} onChange={handleChange} className="border rounded px-2 py-1" />
                         </div>
                         <div className="flex flex-col">
-                            <label className="text-xs font-bold mb-1">Дата</label>
-                            <input type="date" name="date_working" value={getFormattedDate(editedTask.date_working)} onChange={handleChange} className="border rounded px-2 py-1" />
+                            <label className="text-xs font-bold mb-1">Дата початку</label>
+                            <div className="border rounded px-2 py-1 bg-gray-100 text-sm h-[30px] flex items-center">
+                                {editedTask.date_working ? new Date(editedTask.date_working).toLocaleDateString('uk-UA') : 'Розрахунок...'}
+                            </div>
                         </div>
                         <div className="flex flex-col">
                             <label className="text-xs font-bold mb-1">Дільниця 1</label>

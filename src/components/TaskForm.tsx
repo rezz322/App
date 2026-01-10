@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from "@tauri-apps/api/core";
-import { Task, FormData, Message } from '../types';
+import { Task, FormData, Message, Offer } from '../types';
 import { getAvailableDate } from '../utils/dateUtils';
 
 interface TaskFormProps {
@@ -8,18 +8,40 @@ interface TaskFormProps {
   onSubmit: (data: FormData) => Promise<{ success: boolean; error?: string }>;
 }
 
+// Main component for the task creation form
 const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
   const [formData, setFormData] = useState<FormData>({
-    date: 0,
+    date_working: 0,
     name: '',
     field1: 0,
     field2: 0,
     field3: 0,
   });
 
+  const [customWeekends, setCustomWeekends] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const response: Message<Offer[]> = await invoke("get_all_offer_command");
+        if (response.info === "Success" && response.data) {
+          const weekendSet = new Set<string>();
+          response.data.forEach(offer => {
+            const dateKey = `${offer.year}-${String(offer.month).padStart(2, '0')}-${String(offer.day).padStart(2, '0')}`;
+            weekendSet.add(dateKey);
+          });
+          setCustomWeekends(weekendSet);
+        }
+      } catch (e) {
+        console.error("Failed to fetch offers:", e);
+      }
+    };
+    fetchOffers();
+  }, []);
+
+  // Effect to automatically calculate the next available date when field hours change
   useEffect(() => {
     const calculateDate = async () => {
-      // Only calculate if at least one field has hours
       if (formData.field1 > 0 || formData.field2 > 0 || formData.field3 > 0) {
         try {
           const response: Message<number> = await invoke("get_next_available_date_command", {
@@ -29,8 +51,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
           });
 
           if (response.info === "Success" && response.data > 0) {
-            // response.data is seconds, convert to ms
-            setFormData(prev => ({ ...prev, date: response.data * 1000 }));
+            setFormData(prev => ({ ...prev, date_working: response.data * 1000 }));
           }
         } catch (e) {
           console.error("Failed to calculate date:", e);
@@ -38,18 +59,17 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
       }
     };
 
-    const timeoutId = setTimeout(calculateDate, 500); // Debounce 500ms
+    const timeoutId = setTimeout(calculateDate, 500);
     return () => clearTimeout(timeoutId);
   }, [formData.field1, formData.field2, formData.field3]);
 
+  // Function to get the formatted next available time string for a specific workstation
   const getNextAvailableTime = (fieldKey: 'field1_end' | 'field2_end' | 'field3_end') => {
-    // Determine the field name from fieldKey (remove _end)
     const fieldName = fieldKey.replace('_end', '');
-    console.log(fieldName);
-    
-    return getAvailableDate(tasks, fieldName);
+    return getAvailableDate(tasks, fieldName, customWeekends);
   };
 
+  // Handler for form input field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -57,7 +77,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
       [name]:
         name === 'name'
           ? value
-          : name === 'date'
+          : name === 'date_working'
             ? new Date(value).getTime()
             : value === ''
               ? 0
@@ -65,12 +85,13 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
     }));
   };
 
+  // Handler for form submission to save a new order
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = await onSubmit(formData);
     if (result.success) {
       setFormData({
-        date: 0,
+        date_working: 0,
         name: '',
         field1: 0,
         field2: 0,
@@ -101,7 +122,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ tasks, onSubmit }) => {
           <label className="block text-gray-700 text-sm font-bold mb-2">Дата початку (Автоматично)</label>
           <div className="relative">
             <div className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 min-h-[38px]">
-              {formData.date ? new Date(formData.date).toLocaleDateString('uk-UA') : 'Очікування вводу...'}
+              {formData.date_working ? new Date(formData.date_working).toLocaleDateString('uk-UA') : 'Очікування вводу...'}
             </div>
           </div>
         </div>

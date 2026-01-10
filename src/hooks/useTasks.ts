@@ -25,7 +25,7 @@ export function useTasks() {
     }
   }, []);
 
-  const createTask = async (formData: { name: string; date: number; field1: number; field2: number; field3: number }) => {
+  const createTask = async (formData: { name: string; date_working: number; field1: number; field2: number; field3: number }) => {
     try {
       const response: Message<any> = await invoke("create_task_command", formData);
       if (response.info === "Success") {
@@ -55,9 +55,9 @@ export function useTasks() {
     }
   };
 
-  const updateTaskStatus = async (id: number, isComlited: boolean) => {
+  const updateTaskStatus = async (id: number, is_comlited: boolean) => {
     try {
-      await invoke("update_task_check_command", { id, isComlited });
+      await invoke("update_task_check_command", { id, is_comlited });
       await fetchTasks();
       return { success: true };
     } catch (err) {
@@ -83,7 +83,7 @@ export function useTasks() {
 
   useEffect(() => {
     fetchTasks();
-    
+
     // Synchronize between routes if one page updates tasks
     const handleUpdate = () => fetchTasks();
     window.addEventListener('tasksUpdated', handleUpdate);

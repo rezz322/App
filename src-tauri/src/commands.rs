@@ -20,17 +20,18 @@ pub struct Message<T> {
     info: MessageType,
 }
 
-#[tauri::command]
+// Creates a new task in the database
+#[tauri::command(rename_all = "snake_case")]
 pub fn create_task_command(
     state: State<AppState>,
     name: String,
-    date: i64,
+    date_working: i64,
     field1: i32,
     field2: i32,
     field3: i32,
 ) -> Message<Task> {
     let conn = state.conn.lock().unwrap();
-    let tasks = create_task(&conn, name, date, field1, field2, field3).unwrap();
+    let tasks = create_task(&conn, name, date_working, field1, field2, field3).unwrap();
 
     return Message::<Task> {
         data: tasks,
@@ -38,6 +39,7 @@ pub fn create_task_command(
     };
 }
 
+// Retrieves all tasks from the database
 #[tauri::command]
 pub fn get_all_task_command(state: State<AppState>) -> Message<Vec<Task>> {
     let conn = state.conn.lock().unwrap();
@@ -48,19 +50,29 @@ pub fn get_all_task_command(state: State<AppState>) -> Message<Vec<Task>> {
     };
 }
 
-#[tauri::command]
+// Updates an existing task in the database
+#[tauri::command(rename_all = "snake_case")]
 pub fn update_task_command(
     state: State<AppState>,
     id: i32,
     name: String,
-    date: i64,
+    date_working: i64,
     field1: i32,
     field2: i32,
     field3: i32,
     is_comlited: i8,
 ) -> Message<Task> {
     let conn = state.conn.lock().unwrap();
-    match update_task(&conn, id, name, date, field1, field2, field3, is_comlited) {
+    match update_task(
+        &conn,
+        id,
+        name,
+        date_working,
+        field1,
+        field2,
+        field3,
+        is_comlited,
+    ) {
         Ok(task) => Message {
             data: task,
             info: MessageType::Success,
@@ -87,6 +99,7 @@ pub fn update_task_command(
     }
 }
 
+// Deletes a task from the database by its ID
 #[tauri::command]
 pub fn delete_task_command(state: State<AppState>, id: i32) -> Message<i32> {
     let conn = state.conn.lock().unwrap();
@@ -97,6 +110,7 @@ pub fn delete_task_command(state: State<AppState>, id: i32) -> Message<i32> {
     };
 }
 
+// Creates a new custom weekend/offer in the database
 #[tauri::command]
 pub fn create_offer_command(
     state: State<AppState>,
@@ -117,13 +131,15 @@ pub fn create_offer_command(
     };
 }
 
-#[tauri::command]
+// Updates the completion status of a task
+#[tauri::command(rename_all = "snake_case")]
 pub fn update_task_check_command(state: State<AppState>, id: i32, is_comlited: bool) -> i32 {
     let conn: std::sync::MutexGuard<'_, rusqlite::Connection> = state.conn.lock().unwrap();
     let data = update_check(&conn, id, is_comlited).unwrap();
     data
 }
 
+// Retrieves all custom weekends from the database
 #[tauri::command]
 pub fn get_all_offer_command(state: State<AppState>) -> Message<Vec<Offer>> {
     let conn = state.conn.lock().unwrap();
@@ -134,6 +150,7 @@ pub fn get_all_offer_command(state: State<AppState>) -> Message<Vec<Offer>> {
     };
 }
 
+// Deletes all custom weekends from the database
 #[tauri::command]
 pub fn delete_all_offer_command(state: State<AppState>) -> Message<usize> {
     let conn = state.conn.lock().unwrap();
@@ -144,6 +161,7 @@ pub fn delete_all_offer_command(state: State<AppState>) -> Message<usize> {
     };
 }
 
+// Deletes a custom weekend from the database by its ID
 #[tauri::command]
 pub fn delete_offer_command(state: State<AppState>, id: i32) -> Message<usize> {
     let conn = state.conn.lock().unwrap();
@@ -154,6 +172,7 @@ pub fn delete_offer_command(state: State<AppState>, id: i32) -> Message<usize> {
     };
 }
 
+// Calculates the next available date for starting work based on current load
 #[tauri::command]
 pub fn get_next_available_date_command(
     state: State<AppState>,

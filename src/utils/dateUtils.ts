@@ -1,17 +1,21 @@
 export const DAILY_HOUR_LIMIT = 8;
 
+// Checks if a date is a weekend (Saturday or Sunday)
 export function isWeekend(date: Date): boolean {
   return date.getDay() === 0 || date.getDay() === 6;
 }
 
+// Formats a date into a key string of format YYYY-MM-DD
 export function formatToDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+// Formats a date into a storage key string (uses 0-indexed month)
 export function formatToStorageKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
+// Skips weekends and holidays, returning the next working day
 export function skipWeekends(date: Date, customWeekendDatesSet: Set<string>): Date {
   const newDate = new Date(date);
   while (true) {
@@ -24,6 +28,7 @@ export function skipWeekends(date: Date, customWeekendDatesSet: Set<string>): Da
   return newDate;
 }
 
+// Calculates the end date based on hours, skipping weekends
 export function calculateWorkingDays(startDate: Date, hours: number, customWeekendDatesSet: Set<string>): Date {
   let currentDay = new Date(startDate);
   let remainingHours = hours;
@@ -42,9 +47,9 @@ export function calculateWorkingDays(startDate: Date, hours: number, customWeeke
   return currentDay;
 }
 
+// Returns an object with the end date and hours used on the last working day
 export function calculateEndDateDetailed(startDate: Date, hours: number, customWeekendDatesSet: Set<string> = new Set()): { date: Date, usedHoursOnLastDay: number } {
   let currentDay = new Date(startDate);
-  // Reset time to start of day to ensure consistent day skipping
   currentDay.setHours(0, 0, 0, 0);
 
   let remainingHours = hours;
@@ -69,18 +74,29 @@ export function calculateEndDateDetailed(startDate: Date, hours: number, customW
   return { date: currentDay, usedHoursOnLastDay };
 }
 
-export const getAvailableDate = (tasks: any[], fieldName: string) => {
+// Calculates the earliest available working date for a specific production stage
+export const getAvailableDate = (tasks: any[], fieldName: string, customWeekendDatesSet: Set<string> = new Set()) => {
   const relevantTasks = tasks.filter(t => t.is_comlited === 0 && (t[fieldName as keyof typeof t] || 0) > 0);
 
   if (relevantTasks.length === 0) {
     return "Вільна";
   }
 
-  // Sort tasks by date_working then id to respect order
-  relevantTasks.sort((a, b) => {
-    if (a.date_working !== b.date_working) {
-      return a.date_working - b.date_working;
+  const getStageStart = (t: any) => {
+    if (fieldName === 'field1') return t.date_working;
+    if (fieldName === 'field2') return t.field1 > 0 ? t.field1_end : t.date_working;
+    if (fieldName === 'field3') {
+      if (t.field2 > 0) return t.field2_end;
+      if (t.field1 > 0) return t.field1_end;
+      return t.date_working;
     }
+    return t.date_working;
+  };
+
+  relevantTasks.sort((a, b) => {
+    const startA = getStageStart(a);
+    const startB = getStageStart(b);
+    if (startA !== startB) return startA - startB;
     return a.id - b.id;
   });
 
@@ -88,17 +104,14 @@ export const getAvailableDate = (tasks: any[], fieldName: string) => {
   let lastActiveDate: Date | null = null;
 
   for (const task of relevantTasks) {
-    console.log(new Date(task.field3_end * 1000));
-
-    let currentDate = new Date(task.date_working * 1000);
-    // Ensure time is stripped for logic (although date_working is likely clean, mostly)
+    let currentDate = new Date(getStageStart(task) * 1000);
     currentDate.setHours(0, 0, 0, 0);
 
     let remaining = Number(task[fieldName as keyof typeof task]);
 
     while (remaining > 0) {
-      // Skip weekends
-      if (isWeekend(currentDate)) {
+      const dateKey = formatToDateKey(currentDate);
+      if (isWeekend(currentDate) || customWeekendDatesSet.has(dateKey)) {
         currentDate.setDate(currentDate.getDate() + 1);
         continue;
       }
@@ -117,7 +130,7 @@ export const getAvailableDate = (tasks: any[], fieldName: string) => {
       remaining -= take;
 
       lastActiveDate = new Date(currentDate);
-      console.log(lastActiveDate);
+
       if (remaining > 0) {
         currentDate.setDate(currentDate.getDate() + 1);
       }
@@ -140,7 +153,7 @@ export const getAvailableDate = (tasks: any[], fieldName: string) => {
   } else {
     let nextDay = new Date(lastActiveDate);
     nextDay.setDate(nextDay.getDate() + 1);
-    nextDay = skipWeekends(nextDay, new Set()); // Assuming empty custom set
+    nextDay = skipWeekends(nextDay, customWeekendDatesSet);
 
     const nDay = String(nextDay.getDate()).padStart(2, '0');
     const nMonth = String(nextDay.getMonth() + 1).padStart(2, '0');
@@ -150,6 +163,7 @@ export const getAvailableDate = (tasks: any[], fieldName: string) => {
   }
 };
 
+// Returns today's date as a string in YYYY-MM-DD format
 export const getTodayDateString = () => {
   const today = new Date();
   const year = today.getFullYear();
@@ -158,8 +172,10 @@ export const getTodayDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
+// Normalizes timestamp to milliseconds (if it's in seconds)
 export const normalizeMs = (value: number) => (value < 1e12 ? value * 1000 : value);
 
+// Formats timestamp in Ukrainian (Day and full month name)
 export const formatUkDayMonth = (timestamp: number) => {
   return new Date(normalizeMs(timestamp)).toLocaleDateString('uk-UA', {
     day: 'numeric',
@@ -167,6 +183,7 @@ export const formatUkDayMonth = (timestamp: number) => {
   }) + '.';
 };
 
+// Formats a date object into a full date-time string in Ukrainian
 export const formatUkDateTime = (date: Date) => {
   const dateOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
