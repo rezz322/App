@@ -27,7 +27,7 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      # Крок інсталяції залежностей для Ubuntu видалено
+      # Крок для Ubuntu видалено
 
       - name: install frontend dependencies
         run: npm install 
