@@ -4,6 +4,7 @@ import { Task } from "../types";
 import DashboardStats from "../components/DashboardStats";
 import TaskForm from "../components/TaskForm";
 import Offer from "../components/Offer";
+import {checkForAppUpdates} from "../utils/update_task"
 
 export default function Dashboard() {
     const { tasks, loading, error, createTask, updateTask, updateTaskStatus, deleteTask, fetchTasks } = useTasks();
@@ -51,6 +52,7 @@ export default function Dashboard() {
                     <h1 className="text-3xl font-bold text-gray-900 transition-colors">Дашборд</h1>
                     <p className="text-gray-600">Управління замовленнями та робочим часом</p>
                 </header>
+                <button className='absolute bg-red-100 h-12 w-12 right-0 top-23' onClick={checkForAppUpdates}></button>
 
                 <DashboardStats tasks={tasks} />
 

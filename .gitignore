@@ -33,3 +33,14 @@ src-tauri/target/
 # Database files
 *.sqlite
 db.sqlite
+
+# Секреты и ключи
+*.key
+*.pfx
+*.p12
+.env
+
+# Сборка и зависимости
+node_modules/
+src-tauri/target/
+src-tauri/gen/schemas/

@@ -4,7 +4,7 @@
   "pub_date": "2026-01-10T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "ТУТ_БУДЕ_ПІДПИС",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENBNzlBNEY4MTEyOThFMkQKUldRdGppa1IrS1I1eWovQUwwcFExNVNYRVp0TDg0cUFEM3RxRU5naWpMdmg5YkdFb0EzRVRuUUgK",
       "url": "https://github.com/rezz322/App/releases/latest/download/task_app_x64.msi.zip"
     }
   }
