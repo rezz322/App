@@ -1,5 +1,4 @@
-name: "Publish Release"
-
+name: "publish"
 on:
   push:
     branches:
@@ -12,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest]
+        platform: [ windows-latest]
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -21,7 +20,8 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: lts/*
+          cache: 'npm' # ускоряет повторные сборки
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -30,17 +30,19 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: install frontend dependencies
-        run: npm install
+        run: npm install # ЭТОТ ШАГ ИСПРАВЛЯЕТ ОШИБКУ 127
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: build and publish
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: 0.1.0 # the action automatically replaces \_\_VERSION\_\_ with the app version
+          tagName: v__VERSION__
           releaseName: "App v__VERSION__"
-          releaseBody: "See the assets to download for this version."
           releaseDraft: true
           prerelease: false
