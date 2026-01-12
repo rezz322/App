@@ -11,6 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Лишаємо тільки macOS та Windows
         platform: [macos-latest, windows-latest]
 
     runs-on: ${{ matrix.platform }}
@@ -26,11 +27,7 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+      # Крок інсталяції залежностей для Ubuntu видалено
 
       - name: install frontend dependencies
         run: npm install 
