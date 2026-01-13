@@ -4,8 +4,8 @@
   "pub_date": "2026-01-10T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRG5sTktHUHFyQUVPb0NrWnFjUmxnYWhJUG0yRVRuWk11S1lkbXVvWkg1ZXZiL3h6MVJtYzZBcnhIWlBtUnJuSWpxQ01FcHlaVEJYVkMwV3ZYUC9nNFFDV0I5YUFCUkFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4Mjk4OTE5CWZpbGU6dGFza19hcHBfMC4xLjBfeDY0X2VuLVVTLm1zaQpmblFjeWlKSjU0WktmSTFNcnNxdjFHTVpMS21WZC9BZmZuMmlsbGhHenJ3RkVQdFZ1TW4zWGlpMng0TVhFdU0rM2lXOG1KSUtyQ2UzNndTa1M1WTVDdz09Cg==",
-      "url": "https://github.com/rezz322/App/releases/latest/download/task_app_x64.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRG5sTktHUHFyQU8vdUkxeTVMNWVOSy9OcnFSVEFLQXY1SmVCNGNWRSsvdy9iN042UTVsOVlnSk1rZ3dmcmJOTEt2bXQzRGFjZ3Fyc09VQlZHK2Y5a1RjdEMxSUZ2dEFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4MzAyMDg0CWZpbGU6dGFza19hcHBfMC4xLjBfeDY0LXNldHVwLmV4ZQpESHlZSWczMllZRklqRDVqMTRudWpjK0JtL25NNFk4WlYwRUx2RTVLVjhvaHVJcXg3Qk82QUFnMlFJM2pFRFZZVXlUYTMxZU42OUZLRGdwbjFiNmFCQT09Cg==",
+      "url": "https://github.com/rezz322/App/releases/latest/download/task_app_0.1.1_x64-setup.exe"
     }
   }
 }

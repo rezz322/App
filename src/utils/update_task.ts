@@ -7,7 +7,7 @@ export async function checkUpdateAvailable(): Promise<boolean> {
     return !!update;
   } catch (error) {
     // Ошибка проверки обновлений не критична, просто логируем и возвращаем false
-    console.log('Update check unavailable:', error instanceof Error ? error.message : String(error));
+    console.log( String(error));
     return false;
   }
 }
