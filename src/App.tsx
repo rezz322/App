@@ -1,14 +1,9 @@
-import { useEffect } from "react";
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Main from './Pages/Form';
 import Calendar from "./Pages/Calendar";
-import { checkForUpdates } from "./hooks/useUpdater";
 
 function App() {
-  useEffect(() => {
-    checkForUpdates();
-  }, []);
 
   return (
     <>

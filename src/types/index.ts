@@ -54,3 +54,7 @@ export type DayStateItem = {
   color: number;
   offerId: number | null;
 };
+
+export interface DashboardProps {
+  updateAvailable: boolean;
+}
