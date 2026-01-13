@@ -5,7 +5,7 @@
   "platforms": {
     "windows-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSRG5sTktHUHFyQUVPb0NrWnFjUmxnYWhJUG0yRVRuWk11S1lkbXVvWkg1ZXZiL3h6MVJtYzZBcnhIWlBtUnJuSWpxQ01FcHlaVEJYVkMwV3ZYUC9nNFFDV0I5YUFCUkFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4Mjk4OTE5CWZpbGU6dGFza19hcHBfMC4xLjBfeDY0X2VuLVVTLm1zaQpmblFjeWlKSjU0WktmSTFNcnNxdjFHTVpMS21WZC9BZmZuMmlsbGhHenJ3RkVQdFZ1TW4zWGlpMng0TVhFdU0rM2lXOG1KSUtyQ2UzNndTa1M1WTVDdz09Cg==",
-      "url": "https://github.com/rezz322/App/releases/latest/download/task_app_x64.msi.zip"
+      "url": "https://github.com/rezz322/App/releases/latest/download/task_app_x64.msi"
     }
   }
 }

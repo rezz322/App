@@ -36,12 +36,12 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/rezz322/App/releases/latest/download/letest.json"
+        "https://github.com/rezz322/App/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDAwQUJGQTE4NEE1MzlFNDMKUldSRG5sTktHUHFyQUozK1dTalZ0cEJYSkxrOTBwN2JSZnlBVzI0UmthN3VnL0VGbmMwanZXdVoK",
     
       "headers": {
-      "Authorization": "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"
+      "Authorization": "token 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"
       }
     }
 
