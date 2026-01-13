@@ -11,7 +11,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Лишаємо тільки macOS та Windows
         platform: [macos-latest, windows-latest]
 
     runs-on: ${{ matrix.platform }}
@@ -27,7 +26,8 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      # Крок для Ubuntu видалено
+      - name: Rocket-fast build cache
+        uses: swatinem/rust-cache@v2
 
       - name: install frontend dependencies
         run: npm install 
