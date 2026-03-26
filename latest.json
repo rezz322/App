@@ -1,0 +1,11 @@
+{
+  "version": "0.1.4",
+  "notes": "правки",
+  "pub_date": "2026-01-10T00:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTZ3lPaWtGZDFReFZ5bzFVN2J5K001UHJnZFFSY2gzZkYveks1bWQvb3RlODJFeEJPTXBoQTA4eXBHUDlaZG1vNEYvUWpNSjZZR0xBVWhnTlQ2R3YwQ05vZktTVW5QT0FrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0NTM0NDE4CWZpbGU6dGFza19hcHBfMC4xLjRfeDY0LXNldHVwLmV4ZQpmNGFTNUlEcjhIUXhRZWhhMFA0NUcybklwbHRTUU9rZkdpMlJsbkZpWlEyWHRiQURVTXRYeG93UXpkdE01TXRRMitOMjFQOWZFTW5xVGlYSGZ3Z2RDQT09Cg==",
+      "url": "https://github.com/rezz322/App/releases/latest/download/task_app_0.1.4_x64-setup.exe"
+    }
+  }
+}

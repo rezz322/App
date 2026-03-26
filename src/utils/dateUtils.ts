@@ -170,6 +170,7 @@ export const getAvailableDate = (tasks: any[], fieldName: string, customWeekendD
     let nextDay = new Date(lastActiveDate);
     nextDay.setDate(nextDay.getDate() + 1);
     nextDay = skipWeekends(nextDay, customWeekendDatesSet);
+
     const nDateFormatted = formatUkDayMonthOnly(nextDay.getTime());
 
     return `${nDateFormatted} (${formatMinutesToHM(DAILY_HOUR_LIMIT)})`;
