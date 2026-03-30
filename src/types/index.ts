@@ -56,6 +56,7 @@ export type DayStateItem = {
   tasks: TaskSummary[];
   isWorking: boolean;
   color: number;
+  materials: { name: string; color: number }[];
   offerId: number | null;
 };
 

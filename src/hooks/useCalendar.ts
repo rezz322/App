@@ -6,7 +6,8 @@ import {
   skipWeekends,
   formatToDateKey,
   formatToStorageKey,
-  DAILY_HOUR_LIMIT
+  DAILY_HOUR_LIMIT,
+  normalizeMs
 } from "../utils/dateUtils";
 
 // Hook to manage calendar state and display logic
@@ -44,7 +45,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
     const customWeekendDatesSet = new Set(customWeekendDatesMap.keys());
 
     const dailyTaskData: {
-      [key: string]: { totalHours: number; is_working: boolean; tasks: TaskSummary[]; color: number };
+      [key: string]: { totalHours: number; is_working: boolean; tasks: TaskSummary[]; materials: { name: string; color: number }[]; color: number };
     } = {};
 
     const sortedTasks = [...tasks].sort((a, b) => {
@@ -90,7 +91,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
         const isCustomWeekendDay = customWeekendDatesSet.has(dateKey);
 
         if (!dailyTaskData[storageKey]) {
-          dailyTaskData[storageKey] = { totalHours: 0, is_working: false, tasks: [], color: 0 };
+          dailyTaskData[storageKey] = { totalHours: 0, is_working: false, tasks: [], materials: [], color: 0 };
         }
 
         if (!isStandardWeekendDay && !isCustomWeekendDay) {
@@ -123,6 +124,26 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
       }
     });
 
+    // Distribution of materials
+    tasks.forEach((task) => {
+      let matTimestamp = 0;
+      if (selectedDilytsia === "field1") matTimestamp = task.date_materials1;
+      else if (selectedDilytsia === "field2") matTimestamp = task.date_materials2;
+      else if (selectedDilytsia === "field3") matTimestamp = task.date_materials3;
+
+      if (matTimestamp > 0) {
+        const matDate = new Date(normalizeMs(matTimestamp));
+        const storageKey = formatToStorageKey(matDate);
+        if (!dailyTaskData[storageKey]) {
+          dailyTaskData[storageKey] = { totalHours: 0, is_working: false, tasks: [], materials: [], color: 0 };
+        }
+        dailyTaskData[storageKey].materials.push({
+          name: task.name,
+          color: task.collor || task.color || 0
+        });
+      }
+    });
+
     const newDays: DayStateItem[] = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d);
@@ -132,7 +153,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
       const offerId = customWeekendDatesMap.get(dateKey) || null;
       const isCustomW = offerId !== null;
       const storageKey = `${year}-${month}-${d}`;
-      const dt = dailyTaskData[storageKey] || { totalHours: 0, is_working: false, tasks: [], color: 0 };
+      const dt = dailyTaskData[storageKey] || { totalHours: 0, is_working: false, tasks: [], materials: [], color: 0 };
 
       newDays.push({
         day: d,
@@ -140,6 +161,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
         isWeekend: isW || isCustomW,
         totalHours: dt.totalHours,
         tasks: dt.tasks,
+        materials: dt.materials,
         yer: year,
         month: month,
         isWorking: dt.is_working,

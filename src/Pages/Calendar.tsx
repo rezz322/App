@@ -117,6 +117,7 @@ export default function Calendar() {
                   onDayClick={onDayClick}
                   ondaydelete={onDayDelete}
                   offerId={d.offerId}
+                  materials={d.materials}
                 />
               ))}
             </div>

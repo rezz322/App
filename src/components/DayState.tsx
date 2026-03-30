@@ -13,6 +13,7 @@ interface DayStateProps {
   onDayClick: (day: number, yer: number, month: number) => void;
   ondaydelete: (id: number) => void;
   offerId: number | null;
+  materials?: { name: string; color: number }[];
 }
 
 const DayState: React.FC<DayStateProps> = ({
@@ -26,6 +27,7 @@ const DayState: React.FC<DayStateProps> = ({
   onDayClick,
   ondaydelete,
   offerId,
+  materials = [],
 }) => {
   const getBackgroundColor = () => {
     if (isWorkingPeriod) return "bg-blue-50 border-blue-200 hover:bg-white transition-colors text-blue-900";
@@ -89,6 +91,20 @@ const DayState: React.FC<DayStateProps> = ({
             {task.name} ({formatMinutesToHM(task.hours)})
           </div>
         ))}
+
+        {materials.length > 0 && (
+          <div className="mt-1 pt-1 border-t border-gray-200/50">
+            {materials.map((mat, i) => (
+              <div
+                key={`mat-${i}`}
+                className={`text-[9px] truncate border border-dashed leading-tight rounded px-1 py-0.5 mb-1 shadow-sm font-medium ${getTaskColor(mat.color)}`}
+                title={`Матеріали: ${mat.name}`}
+              >
+                📦 {mat.name}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {isWeekend && !isWorkingPeriod && !offerId && (
