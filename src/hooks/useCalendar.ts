@@ -11,7 +11,12 @@ import {
 } from "../utils/dateUtils";
 
 // Hook to manage calendar state and display logic
-export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: "field1" | "field2" | "field3") {
+export function useCalendar(
+  tasks: Task[],
+  currentDate: Date,
+  selectedDilytsia: "field1" | "field2" | "field3",
+  viewMode: 'tasks' | 'materials' = 'tasks'
+) {
   const [daysState, setDaysState] = useState<DayStateItem[]>([]);
   const [initialDaysState, setInitialDaysState] = useState<DayStateItem[]>([]);
 
@@ -62,7 +67,8 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
       return getStageStart(a) - getStageStart(b);
     });
 
-    sortedTasks.forEach((task) => {
+    if (viewMode === 'tasks') {
+      sortedTasks.forEach((task) => {
       let remainingHours = 0;
       let currentDay: Date;
 
@@ -120,12 +126,14 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
         currentDay.setDate(currentDay.getDate() + 1);
         currentDay = skipWeekends(currentDay, customWeekendDatesSet);
 
-        if (currentDay.getFullYear() > year + 2) break;
-      }
-    });
+      if (currentDay.getFullYear() > year + 2) break;
+        }
+      });
+    }
 
     // Distribution of materials
-    tasks.forEach((task) => {
+    if (viewMode === 'materials') {
+      tasks.forEach((task) => {
       let matTimestamp = 0;
       if (selectedDilytsia === "field1") matTimestamp = task.date_materials1;
       else if (selectedDilytsia === "field2") matTimestamp = task.date_materials2;
@@ -143,6 +151,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
         });
       }
     });
+    }
 
     const newDays: DayStateItem[] = [];
     for (let d = 1; d <= daysInMonth; d++) {
@@ -171,7 +180,7 @@ export function useCalendar(tasks: Task[], currentDate: Date, selectedDilytsia: 
     }
     setDaysState(newDays);
     setInitialDaysState(newDays);
-  }, [tasks, year, month, selectedDilytsia]);
+  }, [tasks, year, month, selectedDilytsia, viewMode]);
 
   useEffect(() => {
     buildDaysState();

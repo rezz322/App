@@ -3,7 +3,7 @@ import DayState from "../components/DayState";
 import { useTasks } from "../hooks/useTasks";
 import { useCalendar } from "../hooks/useCalendar";
 
-export default function Calendar() {
+export default function MaterialsCalendar() {
   const { tasks, loading, error } = useTasks();
   const [currentDate, setCurrentDate] = useState(() => {
     const today = new Date();
@@ -11,7 +11,7 @@ export default function Calendar() {
   });
   const [selectedDilytsia, setSelectedDilytsia] = useState<"field1" | "field2" | "field3">("field1");
 
-  const { daysState, onDayClick, onDayDelete, resetCalendar } = useCalendar(tasks, currentDate, selectedDilytsia, 'tasks');
+  const { daysState, onDayClick, onDayDelete, resetCalendar } = useCalendar(tasks, currentDate, selectedDilytsia, 'materials');
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -31,7 +31,7 @@ export default function Calendar() {
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Календар роботи</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Календар матеріалів</h1>
             <div className="flex items-center mt-2 bg-white rounded-lg shadow-sm p-1">
               <button
                 onClick={goToPreviousMonth}
